@@ -1,8 +1,8 @@
 # Scroll-Driven Case Presentations
 
 Two sales case studies rebuilt as **interactive websites instead of slide decks**, to be
-presented live off a laptop. One is a 3D alpine ascent rendered in Three.js; the other is
-an 8-bit pixel RPG with branching paths. Each is a **single self-contained HTML file** —
+presented live off a laptop. One is a 3D alpine descent rendered in Three.js; the other is
+an 8-bit pixel RPG climb with branching paths. Each is a **single self-contained HTML file** —
 no build step, no framework, no bundler.
 
 **▶ Live demos:** https://armansra-hub.github.io/scroll-case-presentations/
@@ -26,8 +26,10 @@ slide looks like every other slide, so nothing signals which beat matters. And i
 strongest evidence of how you think (the reasoning between the bullets) in your voice only,
 where it evaporates.
 
-So instead each scenario became a **journey you climb**. The case narrative maps onto
-physical progress up a mountain: each analytical beat is a *station* you arrive at, the
+So instead each scenario became a **journey you travel**. The case narrative maps onto
+physical progress across a mountain — Scenario 1 descends from the summit to the first
+draw, Scenario 2 climbs from the gate to sunrise. Each analytical beat is a *station* you
+arrive at, the
 popup text is the argument at that station, and the terrain between stations does the work
 that transitions normally can't — it makes the sequence feel earned rather than clicked
 through. Scenario 2 goes further and makes the prospect's decision points into **literal
@@ -70,9 +72,10 @@ All three builds pass as committed.
 ## Scenario 1 — Summit Commerce
 
 A dark, clinical, minimal aesthetic — midnight navy `#05070f`, a single cyan accent
-`#5ee6ff`, thin hairlines, no ornament. A skier ascends a **Three.js** mountain
+`#5ee6ff`, thin hairlines, no ornament. A skier **descends** a Three.js mountain
 (`three@0.161.0`, loaded via import map — there is no npm install anywhere in this repo),
-stopping at each station where the corresponding argument appears.
+stopping at each station where the corresponding argument appears. The framing is the deal
+itself: *from approval email to first draw*, summit down to the base.
 
 It ships in **two builds from the same scene**, because scrolling and presenting want
 opposite things:
