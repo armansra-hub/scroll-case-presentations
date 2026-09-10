@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="en"><head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Scroll-Driven Case Presentations</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#05070f;--accent:#5ee6ff;--ink:#f2f5fb;--body:#c3cbdc;--muted:#7e8aa3;--hair:rgba(255,255,255,.10);--card:rgba(9,11,19,.86)}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--body);font-family:Inter,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;-webkit-font-smoothing:antialiased;line-height:1.6}
+.wrap{max-width:940px;margin:0 auto;padding:clamp(48px,9vw,110px) 24px 90px}
+h1{color:var(--ink);font-size:clamp(28px,5vw,44px);font-weight:700;letter-spacing:-.02em;margin:0 0 14px}
+.lede{font-size:clamp(15px,2vw,18px);max-width:64ch;color:var(--body);margin:0 0 8px}
+.kicker{color:var(--accent);font-size:12px;font-weight:600;letter-spacing:.16em;text-transform:uppercase;margin:0 0 18px}
+.grid{display:grid;gap:18px;margin-top:44px}
+@media(min-width:760px){.grid{grid-template-columns:1fr 1fr}}
+a.card{display:block;background:var(--card);border:1px solid var(--hair);border-radius:14px;padding:24px;text-decoration:none;transition:border-color .18s,transform .18s}
+a.card:hover{border-color:var(--accent);transform:translateY(-2px)}
+a.card h2{color:var(--ink);font-size:18px;margin:0 0 6px;font-weight:600}
+a.card p{margin:0;font-size:14px;color:var(--muted)}
+a.card .tag{display:inline-block;margin-bottom:12px;font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--accent);font-weight:600}
+.note{margin-top:44px;font-size:13.5px;color:var(--muted);border-top:1px solid var(--hair);padding-top:22px}
+.note code{color:var(--body);background:rgba(255,255,255,.05);padding:1px 6px;border-radius:4px;font-size:12.5px}
+a.src{color:var(--accent);text-decoration:none}a.src:hover{text-decoration:underline}
+</style></head><body>
+<div class="wrap">
+  <p class="kicker">Arman Sra · Sales engineering</p>
+  <h1>Scroll-driven case presentations</h1>
+  <p class="lede">Two sales case studies rebuilt as interactive, scroll-driven websites instead of slide decks — one a 3D alpine ascent in Three.js, one an 8-bit pixel RPG. Every word of case copy is verbatim from the source brief; a Python checker proves it.</p>
+  <p class="lede" style="color:var(--muted);font-size:15px">Best on a desktop browser. Scroll to advance.</p>
+
+  <div class="grid">
+    <a class="card" href="summit-commerce-click.html">
+      <span class="tag">Scenario 1 · presenter build</span>
+      <h2>Summit Commerce — clicker</h2>
+      <p>Next/Back buttons and clicker keys tween between fixed stops. The build made for presenting live. Start here.</p>
+    </a>
+    <a class="card" href="summit-commerce.html">
+      <span class="tag">Scenario 1 · scroll build</span>
+      <h2>Summit Commerce — scroll</h2>
+      <p>The same ascent driven by the wheel, with magnetic gates that settle you onto each station.</p>
+    </a>
+    <a class="card" href="horizon-retail.html">
+      <span class="tag">Scenario 2 · scroll build</span>
+      <h2>Horizon Retail Group</h2>
+      <p>An 8-bit pixel RPG: gate, jungle fork, river crossing, cliff climb, sunrise summit. Your branch choices change the route. Press <b>C</b> for CRT scanlines.</p>
+    </a>
+    <a class="card" href="https://github.com/armansra-hub/scroll-case-presentations">
+      <span class="tag">Source</span>
+      <h2>Read the code &amp; the write-up</h2>
+      <p>Three single-file builds, no bundler. The README explains the scroll engine and the verbatim-text rule.</p>
+    </a>
+  </div>
+
+  <p class="note">Each page is one self-contained HTML file — no build step, no framework, no dependencies beyond Three.js and Google Fonts from a CDN. Source: <a class="src" href="https://github.com/armansra-hub/scroll-case-presentations">github.com/armansra-hub/scroll-case-presentations</a></p>
+</div>
+</body></html>

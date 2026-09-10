@@ -1,0 +1,1808 @@
+<!DOCTYPE html>
+<html lang="en"><head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Scenario 2: Horizon Retail Group</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=VT323&display=swap" rel="stylesheet">
+<style>
+:root{
+  --ink:#efe9d6; --muted:#9d96c0; --gold:#ffd24a; --gold2:#c89227;
+  --cyan:#65e6d2; --red:#ff6b6b; --green:#7be08a; --blue:#74c6ff;
+  --panel:#0d0c16; --panel2:#15131f; --bord:#efe9d6; --dark:#07060c;
+  --px:"Press Start 2P",monospace; --vt:"VT323",monospace;
+  --body:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+}
+*{box-sizing:border-box}
+html,body{margin:0;padding:0;height:100%;background:#000;overflow:hidden;overscroll-behavior:none}
+body{font-family:var(--body);color:var(--ink);-webkit-font-smoothing:antialiased}
+
+/* ---------- pixel canvas ---------- */
+#px{position:fixed;top:0;left:0;z-index:1;image-rendering:pixelated;image-rendering:crisp-edges}
+
+/* ---------- CRT scanlines ---------- */
+#crt{position:fixed;inset:0;z-index:40;pointer-events:none;opacity:.55;
+  background:repeating-linear-gradient(0deg,rgba(0,0,0,.14) 0 1px,transparent 1px 3px)}
+#crt::after{content:"";position:absolute;inset:0;background:radial-gradient(ellipse at center,transparent 58%,rgba(0,0,0,.38) 100%)}
+#crt.off{display:none}
+
+/* ---------- fader / veil ---------- */
+#fader{position:fixed;inset:0;z-index:30;background:#000;opacity:0;pointer-events:none}
+#veil{position:fixed;inset:0;z-index:8;background:rgba(3,4,10,.58);opacity:0;visibility:hidden;pointer-events:none}
+
+/* ---------- loader ---------- */
+#loader{position:fixed;inset:0;z-index:99;background:#000;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:18px;transition:opacity .5s ease}
+#loader.gone{opacity:0;pointer-events:none}
+#loader .ld{font-family:var(--px);font-size:12px;color:var(--gold);letter-spacing:.2em;animation:blink 1.1s steps(2) infinite}
+@keyframes blink{50%{opacity:.25}}
+@keyframes bob{0%,100%{transform:translateY(0)}50%{transform:translateY(5px)}}
+
+/* ---------- hero title ---------- */
+#hero{position:fixed;inset:0;z-index:15;display:flex;flex-direction:column;align-items:center;justify-content:flex-start;padding-top:12vh;pointer-events:none;text-align:center}
+.hero-eyebrow{font-family:var(--vt);font-size:20px;letter-spacing:.42em;color:var(--muted);margin-bottom:30px}
+.hero-title{font-family:var(--px);font-size:clamp(22px,2.4vw,34px);line-height:1.7;color:var(--ink);margin:0;
+  text-shadow:0 4px 0 #000,0 0 26px rgba(255,210,74,.22)}
+.hero-title .hz{color:var(--gold)}
+.hero-rule{width:72px;height:4px;background:var(--gold);margin:34px 0 24px;box-shadow:0 3px 0 #000}
+.hero-sub{font-family:var(--vt);font-size:21px;color:var(--muted);letter-spacing:.06em;line-height:1.5;max-width:620px;text-shadow:0 2px 0 #000}
+.hero-hint{margin-top:7vh;display:flex;flex-direction:column;align-items:center;gap:12px;font-family:var(--px);font-size:9px;letter-spacing:.4em;color:var(--gold)}
+.hero-hint .arr{animation:bob 1.4s steps(3) infinite;font-size:13px}
+
+/* ---------- popups (RPG dialogue boxes) ---------- */
+.popup{position:fixed;inset:0;z-index:10;display:flex;align-items:center;justify-content:center;opacity:0;visibility:hidden;pointer-events:none}
+.card{position:relative;width:min(860px,76vw);max-height:76vh;display:flex;flex-direction:column;overflow:hidden;
+  background:var(--panel);border:3px solid var(--bord);outline:3px solid #000;
+  box-shadow:0 10px 0 rgba(0,0,0,.6),0 30px 80px rgba(0,0,0,.8),inset 0 0 0 2px #000;
+  will-change:transform}
+.card::before{content:"";position:absolute;top:0;left:0;right:0;height:3px;background:linear-gradient(90deg,transparent,var(--gold),transparent);opacity:.55;z-index:1}
+.card-head{padding:30px 48px 10px;flex:none}
+.card-eyebrow{font-family:var(--px);font-size:8px;letter-spacing:.32em;color:var(--gold);opacity:.92}
+.card-title{font-family:var(--px);font-size:15px;line-height:1.85;color:var(--ink);margin:14px 0 0;text-shadow:0 3px 0 #000}
+.card-scroller{flex:1 1 auto;min-height:0;overflow:hidden;position:relative}
+.card-content{padding:14px 48px 46px;will-change:transform;font-size:15.5px;line-height:1.72;color:#ddd6e8}
+.card-content p{margin:0 0 14px}
+.more-cue{position:absolute;left:0;right:0;bottom:0;height:74px;pointer-events:none;
+  background:linear-gradient(180deg,rgba(13,12,22,0),rgba(13,12,22,.97) 78%);
+  display:flex;align-items:flex-end;justify-content:center;padding-bottom:10px;opacity:0;transition:opacity .25s ease}
+.more-cue .mc{font-family:var(--px);font-size:8px;letter-spacing:.3em;color:var(--gold);display:flex;align-items:center;gap:8px}
+.more-cue .arr{animation:bob 1.3s steps(3) infinite}
+
+/* content blocks inside popups */
+.lbl{font-family:var(--vt);font-size:21px;color:var(--gold);letter-spacing:.05em;margin:18px 0 8px}
+.q{margin:12px 0;padding:12px 18px;border-left:4px solid var(--cyan);background:rgba(101,230,210,.06);color:#e6f4ef}
+.q.me{border-left-color:var(--gold);background:rgba(255,210,74,.05);color:#f2ead2}
+.callout{margin:14px 0;padding:12px 16px;border:2px solid;background:rgba(255,255,255,.025)}
+.co-lbl{font-family:var(--vt);font-size:20px;letter-spacing:.04em;display:block;margin-bottom:5px}
+.c-red{border-color:rgba(255,107,107,.65)} .c-red .co-lbl{color:var(--red)}
+.c-green{border-color:rgba(123,224,138,.6)} .c-green .co-lbl{color:var(--green)}
+.c-blue{border-color:rgba(116,198,255,.6)} .c-blue .co-lbl{color:var(--blue)}
+.c-gold{border-color:rgba(255,210,74,.6)} .c-gold .co-lbl{color:var(--gold)}
+.c-cyan{border-color:rgba(101,230,210,.6)} .c-cyan .co-lbl{color:var(--cyan)}
+.dead{font-family:var(--px);font-size:10px;color:var(--red);letter-spacing:.1em}
+.formula{margin:16px auto;padding:14px 18px;max-width:540px;text-align:center;font-family:var(--vt);font-size:25px;
+  color:var(--gold);background:#161106;border:3px solid var(--gold2);outline:2px solid #000;letter-spacing:.04em}
+.story{margin:18px 0 6px;padding:14px 18px;border:3px solid var(--gold2);outline:2px solid #000;
+  background:linear-gradient(180deg,#1a1407,#100b04);position:relative}
+.story .st-tag{font-family:var(--px);font-size:8px;color:var(--gold);letter-spacing:.26em;margin-bottom:8px}
+.story p{margin:0;color:#efe3c2}
+ul.pix{list-style:none;margin:8px 0;padding:0}
+ul.pix li{position:relative;padding:6px 0 6px 26px;margin:0}
+ul.pix li::before{content:"";position:absolute;left:4px;top:14px;width:9px;height:9px;background:var(--gold);box-shadow:2px 2px 0 #000}
+ul.pix li.tale::before{background:var(--cyan)}
+.em-subj{display:inline-block;font-family:var(--vt);font-size:21px;color:var(--cyan);background:rgba(101,230,210,.08);
+  border:2px solid rgba(101,230,210,.4);padding:6px 12px;margin-bottom:16px}
+.costbox{margin:14px 0;padding:12px 16px;border:2px solid;background:rgba(255,255,255,.02)}
+.costbox .co-lbl{font-size:21px}
+.cb-on{border-color:rgba(255,107,107,.55)} .cb-on .co-lbl{color:var(--red)}
+.cb-sl{border-color:rgba(123,224,138,.55)} .cb-sl .co-lbl{color:var(--green)}
+
+/* ---------- speech bubbles ---------- */
+.bubble{position:fixed;left:0;top:0;z-index:12;width:min(470px,40vw);opacity:0;visibility:hidden;pointer-events:none;
+  background:#f4efdd;color:#15101e;border:3px solid #15101e;box-shadow:0 0 0 3px #f4efdd,0 10px 0 rgba(0,0,0,.55);
+  padding:16px 20px;transform-origin:50% 100%;will-change:transform}
+.bubble .bub-lbl{font-family:var(--px);font-size:9px;line-height:1.8;color:#7a4a00;margin-bottom:8px;letter-spacing:.04em}
+.bubble .bub-txt{font-family:var(--vt);font-size:21px;line-height:1.32}
+.bubble .tail{position:absolute;bottom:-21px;left:54px;width:6px;height:6px;background:#15101e;
+  box-shadow:6px -6px 0 #15101e,12px -12px 0 #15101e,0 -6px 0 #15101e,6px -12px 0 #15101e,0 -12px 0 #15101e,
+  -6px -12px 0 #f4efdd,-6px -6px 0 #f4efdd, -12px -12px 0 #f4efdd}
+.bubble.small{width:min(380px,34vw)}
+.bubble.small .bub-txt{font-size:19px}
+
+/* ---------- in-scene DOM labels ---------- */
+.sign{position:fixed;left:0;top:0;z-index:6;pointer-events:none;font-family:var(--vt);font-size:19px;letter-spacing:.04em;
+  color:#f0dfae;background:#3a2a16;border:3px solid #190f06;box-shadow:0 4px 0 rgba(0,0,0,.5),inset 0 0 0 1px #5e4524;
+  padding:4px 10px;white-space:nowrap;opacity:0;visibility:hidden;transform-origin:50% 100%}
+.chip{position:fixed;left:0;top:0;z-index:6;pointer-events:none;font-family:var(--px);font-size:8px;color:var(--gold);
+  background:rgba(7,6,12,.85);border:2px solid var(--gold2);padding:4px 7px;white-space:nowrap;opacity:0;visibility:hidden}
+#gameover{position:fixed;left:50%;top:34%;transform:translate(-50%,-50%);z-index:14;font-family:var(--px);
+  font-size:clamp(22px,2.6vw,34px);color:#ff4040;letter-spacing:.18em;text-shadow:0 5px 0 #000,0 0 34px rgba(255,40,40,.45);
+  opacity:0;visibility:hidden;pointer-events:none}
+#walltext{position:fixed;left:50%;top:0;z-index:6;width:min(900px,72vw);text-align:center;pointer-events:none;opacity:0;visibility:hidden}
+#walltext .wt1{font-family:var(--px);font-size:clamp(15px,1.6vw,21px);line-height:2;color:#b8402a;transform:rotate(-1.4deg);
+  text-shadow:2px 2px 0 #270502,-2px 2px 0 #270502,2px -2px 0 #270502,-2px -2px 0 #270502,0 0 26px rgba(184,64,42,.35)}
+#walltext .wt2{font-family:var(--vt);font-size:clamp(20px,1.9vw,26px);line-height:1.45;color:#a05a32;margin-top:18px;transform:rotate(.8deg);
+  text-shadow:2px 2px 0 #1d0a04,-2px 2px 0 #1d0a04,2px -2px 0 #1d0a04,-2px -2px 0 #1d0a04}
+
+/* ---------- nav buttons ---------- */
+#nav{position:fixed;right:26px;bottom:24px;z-index:20;display:flex;flex-direction:column;align-items:flex-end;gap:12px}
+#nav .navtip{font-family:var(--vt);font-size:19px;color:var(--red);background:rgba(7,6,12,.92);border:2px solid var(--red);
+  padding:5px 12px;opacity:0;transform:translateY(6px);transition:opacity .2s,transform .2s;pointer-events:none}
+#nav .navtip.show{opacity:1;transform:translateY(0)}
+.nbtn{font-family:var(--px);font-size:9px;letter-spacing:.08em;color:var(--ink);background:#16122a;text-align:right;
+  border:3px solid var(--bord);outline:2px solid #000;box-shadow:0 5px 0 #000;padding:13px 15px;cursor:pointer;
+  display:flex;align-items:center;gap:10px;user-select:none;transition:transform .06s}
+.nbtn:hover{background:var(--bord);color:#16122a}
+.nbtn:active{transform:translateY(3px);box-shadow:0 2px 0 #000}
+.nbtn .tick{color:var(--green);font-size:11px}
+.nbtn.locked{opacity:.62;cursor:not-allowed}
+.nbtn.locked:hover{background:#16122a;color:var(--ink)}
+.nbtn .lockic{display:inline-block;width:14px;height:14px;position:relative}
+.nbtn .lockic::before{content:"";position:absolute;left:2px;top:0;width:10px;height:7px;border:2px solid currentColor;border-bottom:none}
+.nbtn .lockic::after{content:"";position:absolute;left:0;top:6px;width:14px;height:8px;background:currentColor}
+.nbtn.unlocking .lockic{animation:lockpop .8s steps(4) forwards}
+@keyframes lockpop{0%{transform:rotate(0)}40%{transform:rotate(-18deg)}70%{transform:rotate(14deg) translateY(-3px)}100%{transform:rotate(40deg) translateY(8px);opacity:0}}
+@keyframes navshake{0%,100%{transform:translateX(0)}25%{transform:translateX(-5px)}75%{transform:translateX(5px)}}
+.nbtn.shake{animation:navshake .25s linear 2}
+
+/* ---------- tracker ---------- */
+#tracker{position:fixed;right:24px;top:50%;transform:translateY(-50%);height:56vh;width:34px;z-index:7;pointer-events:none}
+#tracker .rail{position:absolute;left:50%;top:6px;bottom:6px;width:2px;transform:translateX(-50%);background:rgba(239,233,214,.18)}
+.ticon{position:absolute;left:50%;transform:translate(-50%,-50%);opacity:.32;transition:opacity .3s}
+.ticon svg{display:block;filter:drop-shadow(2px 2px 0 #000)}
+.ticon.done{opacity:.7}
+.ticon.on{opacity:1;filter:drop-shadow(0 0 7px rgba(255,210,74,.8))}
+#tr-mark{position:absolute;left:50%;width:8px;height:8px;background:var(--gold);transform:translate(-50%,-50%);
+  box-shadow:0 0 8px rgba(255,210,74,.9),1px 1px 0 #000;transition:none}
+#tr-label{position:fixed;right:64px;top:50%;transform:translateY(-50%) rotate(0);z-index:7;font-family:var(--vt);font-size:17px;
+  letter-spacing:.14em;color:var(--muted);writing-mode:vertical-rl;text-orientation:mixed;opacity:.85;pointer-events:none}
+
+/* ---------- final card ---------- */
+#final-card{position:fixed;inset:0;z-index:16;display:flex;align-items:center;justify-content:center;flex-direction:column;
+  text-align:center;opacity:0;visibility:hidden;pointer-events:none}
+#final-card .fc-inner{display:flex;flex-direction:column;align-items:center;will-change:transform}
+#final-card .fc-eyebrow{font-family:var(--vt);font-size:22px;letter-spacing:.5em;color:#fff3d6;text-shadow:0 2px 0 rgba(40,10,0,.8);margin-bottom:26px}
+#final-card .fc-title{font-family:var(--px);font-size:clamp(20px,2.2vw,30px);line-height:1.8;color:#fffaf0;
+  text-shadow:0 4px 0 rgba(40,10,0,.85),0 0 40px rgba(255,170,60,.5)}
+#final-card .fc-rule{width:70px;height:4px;background:#fff3d6;margin:30px 0 22px;box-shadow:0 3px 0 rgba(40,10,0,.7)}
+#final-card .fc-fin{font-family:var(--px);font-size:11px;letter-spacing:.5em;color:#ffe9b0;text-shadow:0 3px 0 rgba(40,10,0,.85)}
+</style></head>
+<body>
+<canvas id="px"></canvas>
+<div id="veil"></div>
+<div id="crt"></div>
+<div id="fader"></div>
+
+<div id="loader"><div class="ld">LOADING…</div></div>
+
+<!-- hero -->
+<div id="hero">
+  <div class="hero-eyebrow">SLOPE · SDR CASE STUDY</div>
+  <h1 class="hero-title">Scenario 2:<br><span class="hz">Horizon Retail Group</span></h1>
+  <div class="hero-rule"></div>
+  <div class="hero-sub">An unhappy customer. A bigger rival offer. A journey through the<br>jungle of qualification — and over the Horizon. Prepared by Arman.</div>
+  <div class="hero-hint"><span>SCROLL TO BEGIN</span><span class="arr">▼</span></div>
+</div>
+
+<!-- ============ POPUPS ============ -->
+<div class="popup" id="pp-email"><div class="card">
+  <div class="card-head"><div class="card-eyebrow">THE ROAD TO THE GATE</div>
+  <h2 class="card-title">Exercise 2A: Customer Email</h2></div>
+  <div class="card-scroller"><div class="card-content">
+    <div class="em-subj">Subject: Re: Your Slope Line</div>
+    <p>Hi {Name},</p>
+    <p>I appreciate the direct response. If the full $250,000 is what you need right now, I understand why Onramp’s offer looks stronger.</p>
+    <p>Before you make a final decision, I think it would be worth taking 15 minutes to compare the two offers beyond the approved amount. The key differences are repayment structure, term length, total cost, and whether the capital is needed all at once or across multiple inventory cycles.</p>
+    <p>Slope’s line is smaller today, but it is revolving. You can draw what you need, repay it, and reuse the line without reapplying. Onramp’s offer may be the better fit if you need the full $250,000 immediately, but if the capital is being used across multiple purchases, Slope may be worth comparing more closely.</p>
+    <p>Do you have 15 minutes this week? I can walk through both structures with you and help determine which one fits your actual use case better.</p>
+    <p>Best,</p>
+    <p>{Signature}</p>
+  </div><div class="more-cue"><div class="mc"><span>SCROLL</span><span class="arr">▼</span></div></div></div>
+</div></div>
+
+<div class="popup" id="pp-mental"><div class="card">
+  <div class="card-head"><div class="card-eyebrow">THE BUTLER</div>
+  <h2 class="card-title">Mental Model</h2></div>
+  <div class="card-scroller"><div class="card-content">
+    <p>The first gate is whether they need $250K right now for one large purchase, or whether that is their total capital need across multiple buys over the next few months. If they truly need $250K immediately, Slope may not be the best fit for that specific event, and the honest move is to say so while keeping the Slope line open for future or parallel use. If their need is spread across multiple purchases, restocks, or inventory cycles, then Slope becomes much more competitive because the revolving structure, repayment flexibility, early repayment savings, and ability to reuse the line may create more value than a larger one-time advance.</p>
+    <p>From there, the key questions are about the Onramp terms, the actual use case, the purchase schedule, the cash conversion cycle, and the real cost of each product. The comparison should be: Onramp may be better for a single large immediate deployment, while Slope may be better for recurring working capital, faster inventory turns, better repayment alignment, and long-term capital access. Customer stories support this: Kanso for matching repayment to the working capital cycle, Continental Cards for evaluating financing based on inventory turns and structure, and National Bobblehead for line growth and trust.</p>
+    <p>The final strategy is truth-based selling. If Slope is better for their actual use case, show them why and close. If Onramp is better right now, be honest, preserve the relationship, and anchor a future Slope use case to a real date, like the next inventory cycle or when the Onramp advance is close to being repaid.</p>
+  </div><div class="more-cue"><div class="mc"><span>SCROLL</span><span class="arr">▼</span></div></div></div>
+</div></div>
+
+<div class="popup" id="pp-fork"><div class="card">
+  <div class="card-head"><div class="card-eyebrow">THE JUNGLE · PATH 1 — ONE LARGE PURCHASE</div>
+  <h2 class="card-title">“Is $250K the exact amount required, or is that more of a comfortable buffer?”</h2></div>
+  <div class="card-scroller"><div class="card-content">
+    <p style="color:var(--muted);font-family:var(--vt);font-size:20px">The jungle splits. Two signs. One question.</p>
+  </div><div class="more-cue"><div class="mc"><span>SCROLL</span><span class="arr">▼</span></div></div></div>
+</div></div>
+
+<div class="popup" id="pp-croc"><div class="card">
+  <div class="card-head"><div class="card-eyebrow">PATH 1 · THE CROCODILE PIT</div>
+  <h2 class="card-title">Exact amount needed</h2></div>
+  <div class="card-scroller"><div class="card-content">
+    <div class="q me">“Then I want to be straight with you. If you need the full $250K for one purchase right now, our $100K line may not cover that specific event. I would not want to force a fit where there is not one.”</div>
+    <div class="lbl">Then ask:</div>
+    <div class="q">“Is this a one-time purchase, or will there be follow-on restocks, supplier payments, or smaller buys after this?”</div>
+    <div class="callout c-red"><span class="co-lbl">If truly one-time:</span>
+      Onramp may be the better fit for that specific need. I would preserve the relationship, keep the Slope line open, and anchor a follow-up around a real future event. <span class="dead">Dead end.</span></div>
+    <div class="callout c-green"><span class="co-lbl">If part of a larger inventory cycle:</span>
+      Slope may still be useful in parallel for restocks, smaller supplier payments, emergency flexibility, or capital needs after the Onramp term.</div>
+  </div><div class="more-cue"><div class="mc"><span>SCROLL</span><span class="arr">▼</span></div></div></div>
+</div></div>
+
+<div class="popup" id="pp-oasis"><div class="card">
+  <div class="card-head"><div class="card-eyebrow">PATH 1 · THE OASIS</div>
+  <h2 class="card-title">Comfortable buffer</h2></div>
+  <div class="card-scroller"><div class="card-content">
+    <div class="callout c-gold"><span class="co-lbl">If they need over $100K but there is a buffer:</span></div>
+    <div class="q me"><p style="margin:0 0 12px">“If you have not already signed and committed to the $250K offer, I would recommend only taking the exact amount needed for the purchase with Onramp so you are not paying for capital you are not using. If you need more capital, you can draw from Slope whenever you want, choose your repayment schedule and terms, and only pay interest on the money you draw and the days you hold it.</p>
+    <p style="margin:0">Also, with additional paperwork, you may be able to qualify for a higher limit. Many of our customers have done the same. I would be happy to connect with internal resources and send over what we need. Would you be interested in that?”</p></div>
+  </div><div class="more-cue"><div class="mc"><span>SCROLL</span><span class="arr">▼</span></div></div></div>
+</div></div>
+
+<div class="popup" id="pp-s2"><div class="card">
+  <div class="card-head"><div class="card-eyebrow">BOAT PART 1 / 5</div>
+  <h2 class="card-title">Step 2: Understand the actual Onramp terms</h2></div>
+  <div class="card-scroller"><div class="card-content">
+    <div class="q">“Do you mind sharing what fee Onramp quoted you on the $250K?”</div>
+    <div class="q">“And just to confirm, is it fixed weekly payments over 90 days, or is it tied to a percentage of sales?”</div>
+    <div class="q">“If it is fixed weekly, have they shown you the actual weekly payment amount?”</div>
+    <div class="lbl">Why this matters:</div>
+    <p>I cannot compare offers honestly without knowing the actual fee, repayment structure, and weekly payment. Those details determine the true cost of capital and whether the repayment schedule fits the way their business operates.</p>
+    <div class="callout c-green"><span class="co-lbl">If they know the fee:</span>I can compare the actual cost against Slope.</div>
+    <div class="callout c-blue"><span class="co-lbl">If they do not know the fee:</span>I would walk them through the math:</div>
+    <div class="formula">250,000 × (1 + fee %) / weeks = weekly payment</div>
+  </div><div class="more-cue"><div class="mc"><span>SCROLL</span><span class="arr">▼</span></div></div></div>
+</div></div>
+
+<div class="popup" id="pp-s3"><div class="card">
+  <div class="card-head"><div class="card-eyebrow">BOAT PART 2 / 5</div>
+  <h2 class="card-title">Step 3: Map the purchase schedule</h2></div>
+  <div class="card-scroller"><div class="card-content">
+    <div class="q">“Walk me through the buys. Roughly how much do you need and when over the next 90 days?”</div>
+    <div class="lbl">Why this matters:</div>
+    <p>This tells me whether they need $250K on day one or only need pieces of it at different times.</p>
+    <div class="callout c-gold"><span class="co-lbl">If they say:</span>“We need $80K now, $70K next month, and another $100K later.”</div>
+    <div class="lbl">I would think:</div>
+    <p>Onramp gives them the full $250K upfront and charges based on the full advance. Slope lets them draw only what they need when they need it.</p>
+    <div class="lbl">How I would position it:</div>
+    <div class="q me">“If your purchases are staggered, you would be paying their fee on $250K from day one even if you are only using part of it at the beginning. If you are buying $80K now, another $70K next month, and the rest later, you are still paying for the full $250K the entire time. With Slope, you draw what each purchase needs when it needs it. You only pay interest on the amount you actually use, once you repay your balance is replenished, and you can cycle through the line as many times as you need.”</div>
+  </div><div class="more-cue"><div class="mc"><span>SCROLL</span><span class="arr">▼</span></div></div></div>
+</div></div>
+
+<div class="popup" id="pp-s4"><div class="card">
+  <div class="card-head"><div class="card-eyebrow">BOAT PART 3 / 5</div>
+  <h2 class="card-title">Step 4: Check the cash conversion cycle</h2></div>
+  <div class="card-scroller"><div class="card-content">
+    <div class="q">“From wiring the supplier to Walmart paying you back, how many days does one cycle usually take?”</div>
+    <div class="lbl">Follow-up if doing multiple purchases:</div>
+    <div class="q">“Does the first purchase convert back into cash before the next purchase is due, or do those cash needs overlap?”</div>
+    <div class="lbl">Why this matters:</div>
+    <p>The cycle length matters in two ways.</p>
+    <p>First, it tells me whether Slope’s $100K revolving line can be reused across multiple buys. If the first purchase converts back to cash before the next buy is due, Slope can compete hard because they can draw, repay, and reuse the same line instead of taking one large advance upfront.</p>
+    <p>Second, it tells me whether Onramp’s 90-day term matches their cash cycle. If the inventory takes 120 or 150 days to convert back into cash, Onramp may require weekly payments before the purchase has paid for itself. That means they are floating payments out of existing cash instead of revenue from the inventory being financed.</p>
+    <div class="callout c-green"><span class="co-lbl">If the cycle is short enough:</span>Slope may be able to replace Onramp because the line can revolve across purchases.</div>
+    <div class="callout c-blue"><span class="co-lbl">If the cycle is longer than 90 days:</span>Slope may still compete hard because the repayment terms can better align to the actual inventory cycle.</div>
+    <div class="callout c-red"><span class="co-lbl">If purchases overlap and the outstanding need is above $100K:</span>Slope may not fully replace Onramp, but it can still run in parallel for part of the need, future restocks, supplier payments, or flexibility after the Onramp term.</div>
+    <div class="lbl">How I would position it:</div>
+    <div class="q me">“This is the key timing question. If your purchases turn quickly, Slope can be valuable because the line replenishes and can be reused. If your cycle is longer than 90 days, Slope can also be valuable because the repayment schedule may fit the inventory cycle better. Either way, I would want to compare the repayment timing against when the cash actually comes back into the business.”</div>
+    <div class="story"><div class="st-tag">* LORE</div>
+      <div class="lbl" style="margin:0 0 6px">Customer story:</div>
+      <p>Kanso is relevant here. Kanso used Slope to better align repayment with supplier terms and working capital timing.</p></div>
+  </div><div class="more-cue"><div class="mc"><span>SCROLL</span><span class="arr">▼</span></div></div></div>
+</div></div>
+
+<div class="popup" id="pp-s5"><div class="card">
+  <div class="card-head"><div class="card-eyebrow">BOAT PART 4 / 5</div>
+  <h2 class="card-title">Step 5: Compare cost with their real numbers</h2></div>
+  <div class="card-scroller"><div class="card-content">
+    <p>I would not assume Slope is cheaper. I would run the comparison with their actual numbers.</p>
+    <div class="costbox cb-on"><span class="co-lbl">Onramp cost:</span>
+      Flat fee in dollars, fixed weekly payments, fee may not change if they repay early, and payment amount matters because it affects weekly cash flow.</div>
+    <div class="costbox cb-sl"><span class="co-lbl">Slope cost:</span>
+      <div class="formula" style="margin:10px auto">Draw amount × APR ÷ 365 × days held.</div>
+      Interest is based on what they actually draw. First draw has 20% off interest. If they repay early, the cost decreases.</div>
+    <div class="lbl">How I would position it:</div>
+    <div class="q me">“I would want to run this with your actual numbers. If Onramp is cheaper and the structure fits your cycle, I will say that. If Slope is cheaper or better aligned to how you are buying inventory, I will show you that clearly.”</div>
+    <div class="callout c-gold"><span class="co-lbl">If they say Onramp’s fee looks lower:</span>I would not argue from the headline number. I would ask for the fee, repayment timing, and how long they actually hold the capital. A flat fee can look cheaper upfront, but the real comparison depends on the total fee, weekly repayment burden, average capital actually used, and whether early repayment saves anything.</div>
+    <div class="callout c-red"><span class="co-lbl">If they are using the full $250K immediately and the fee is low:</span>Onramp may be the better cost option for that specific event.</div>
+    <div class="callout c-green"><span class="co-lbl">If they are using the capital in stages or turning inventory quickly:</span>Slope may be cheaper because they only pay on what they draw and for the days they hold it.</div>
+  </div><div class="more-cue"><div class="mc"><span>SCROLL</span><span class="arr">▼</span></div></div></div>
+</div></div>
+
+<div class="popup" id="pp-s6"><div class="card">
+  <div class="card-head"><div class="card-eyebrow">BOAT PART 5 / 5</div>
+  <h2 class="card-title">Step 6: Only if it is earned, look for a margin opportunity</h2></div>
+  <div class="card-scroller"><div class="card-content">
+    <div class="q">“Do your suppliers offer better pricing if you buy more or pay earlier?”</div>
+    <div class="callout c-green"><span class="co-lbl">If yes:</span>The comparison is not just cost of capital. It is whether the capital helps them make more money than it costs.</div>
+    <div class="lbl">How I would position it:</div>
+    <div class="q me">“If buying earlier or buying deeper gives you better supplier pricing, then the real question is whether the margin you capture is greater than the financing cost.”</div>
+    <div class="story"><div class="st-tag">* LORE</div>
+      <div class="lbl" style="margin:0 0 6px">Customer story:</div>
+      <p>Neato is relevant here. They used Slope to buy deeper, pay suppliers earlier, and improve margin after financing costs.</p></div>
+    <p style="margin-top:14px">Slope’s longer payment terms could be a plus here.</p>
+  </div><div class="more-cue"><div class="mc"><span>SCROLL</span><span class="arr">▼</span></div></div></div>
+</div></div>
+
+<div class="popup" id="pp-p1"><div class="card">
+  <div class="card-head"><div class="card-eyebrow">THE CLIMB · PAUSE 1 / 8</div>
+  <h2 class="card-title">Fit to actual use case</h2></div>
+  <div class="card-scroller"><div class="card-content"><ul class="pix">
+    <li>If they need the full $250K immediately for one purchase, Onramp may be the better fit for that event.</li>
+    <li>If the need is spread across multiple buys, Slope may be the better structure because they can draw, repay, and reuse the line.</li>
+  </ul></div><div class="more-cue"><div class="mc"><span>SCROLL</span><span class="arr">▼</span></div></div></div>
+</div></div>
+
+<div class="popup" id="pp-p2"><div class="card">
+  <div class="card-head"><div class="card-eyebrow">THE CLIMB · PAUSE 2 / 8</div>
+  <h2 class="card-title">Weekly repayment pressure</h2></div>
+  <div class="card-scroller"><div class="card-content"><ul class="pix">
+    <li>Onramp’s fixed structure means weekly payments start right away.</li>
+    <li>I would compare that payment against their Walmart payout timing and cash conversion cycle.</li>
+  </ul></div><div class="more-cue"><div class="mc"><span>SCROLL</span><span class="arr">▼</span></div></div></div>
+</div></div>
+
+<div class="popup" id="pp-p3"><div class="card">
+  <div class="card-head"><div class="card-eyebrow">THE CLIMB · PAUSE 3 / 8</div>
+  <h2 class="card-title">Idle capital</h2></div>
+  <div class="card-scroller"><div class="card-content"><ul class="pix">
+    <li>If their purchases are staggered, Onramp may charge them on the full $250K even if they are only using part of it upfront.</li>
+    <li>With Slope, they only pay interest on what they draw and for the days they hold it.</li>
+  </ul></div><div class="more-cue"><div class="mc"><span>SCROLL</span><span class="arr">▼</span></div></div></div>
+</div></div>
+
+<div class="popup" id="pp-p4"><div class="card">
+  <div class="card-head"><div class="card-eyebrow">THE CLIMB · PAUSE 4 / 8</div>
+  <h2 class="card-title">Reusability</h2></div>
+  <div class="card-scroller"><div class="card-content"><ul class="pix">
+    <li>Onramp is a larger one-time advance.</li>
+    <li>Slope is revolving, so as they repay, available credit replenishes and can be used again without reapplying.</li>
+  </ul></div><div class="more-cue"><div class="mc"><span>SCROLL</span><span class="arr">▼</span></div></div></div>
+</div></div>
+
+<div class="popup" id="pp-p5"><div class="card">
+  <div class="card-head"><div class="card-eyebrow">THE CLIMB · PAUSE 5 / 8</div>
+  <h2 class="card-title">Term alignment</h2></div>
+  <div class="card-scroller"><div class="card-content"><ul class="pix">
+    <li>Onramp’s offer is 90 days.</li>
+    <li>If their inventory takes 120 or 150 days to convert back into cash, Slope’s longer available terms may better match the actual business cycle.</li>
+    <li class="tale">This is where I would reference Kanso, since they used Slope to better align repayment with supplier terms and working capital timing.</li>
+  </ul></div><div class="more-cue"><div class="mc"><span>SCROLL</span><span class="arr">▼</span></div></div></div>
+</div></div>
+
+<div class="popup" id="pp-p6"><div class="card">
+  <div class="card-head"><div class="card-eyebrow">THE CLIMB · PAUSE 6 / 8</div>
+  <h2 class="card-title">Early repayment and actual cost</h2></div>
+  <div class="card-scroller"><div class="card-content"><ul class="pix">
+    <li>With Slope, cost is based on the amount drawn and days held.</li>
+    <li>If they repay early, the cost goes down.</li>
+    <li>With a flat-fee structure, early repayment may not create the same savings.</li>
+    <li>I would not assume Slope is cheaper. I would get Onramp’s actual fee and run the comparison honestly.</li>
+  </ul></div><div class="more-cue"><div class="mc"><span>SCROLL</span><span class="arr">▼</span></div></div></div>
+</div></div>
+
+<div class="popup" id="pp-p7"><div class="card">
+  <div class="card-head"><div class="card-eyebrow">THE CLIMB · PAUSE 7 / 8</div>
+  <h2 class="card-title">Line growth</h2></div>
+  <div class="card-scroller"><div class="card-content"><ul class="pix">
+    <li>The $100K approval is not necessarily the ceiling.</li>
+    <li>If they use the line responsibly and build repayment history, there may be a path to a higher limit over time.</li>
+    <li class="tale">National Bobblehead is the relevant story here.</li>
+  </ul></div><div class="more-cue"><div class="mc"><span>SCROLL</span><span class="arr">▼</span></div></div></div>
+</div></div>
+
+<div class="popup" id="pp-p8"><div class="card">
+  <div class="card-head"><div class="card-eyebrow">THE CLIMB · PAUSE 8 / 8</div>
+  <h2 class="card-title">Coexistence</h2></div>
+  <div class="card-scroller"><div class="card-content"><ul class="pix">
+    <li>This does not have to be either/or.</li>
+    <li>If Onramp is better for the immediate large purchase, Slope can still be useful as the standing line for future restocks, supplier payments, emergency flexibility, or the next cycle.</li>
+  </ul></div><div class="more-cue"><div class="mc"><span>SCROLL</span><span class="arr">▼</span></div></div></div>
+</div></div>
+
+<div class="popup" id="pp-win"><div class="card">
+  <div class="card-head"><div class="card-eyebrow">JUST BELOW THE SUMMIT</div>
+  <h2 class="card-title">What would make you believe the customer is still winnable?</h2></div>
+  <div class="card-scroller"><div class="card-content">
+    <p>They are still winnable because they replied instead of ghosting, and objections are engagement. Their issue is specific: Onramp approved more money. That gives me a clear problem to solve. They also have not drawn on either facility yet, so the decision is still open. If they are only comparing headline amount, there may still be an information gap around Onramp’s actual fee, weekly repayment, purchase timing, cash conversion cycle, and whether they truly need the full $250K at once. They came to Slope first, so the disappointment is also a buying signal. If they are willing to share the Onramp terms and walk through the numbers, then the deal is very winnable if Slope saves them money, makes them money, reduces repayment pressure, or better fits the way they buy inventory. Even if Onramp is better for the immediate purchase, Slope can still win later or in parallel because the line stays open for future restocks, supplier payments, emergency flexibility, or the next capital cycle.</p>
+  </div><div class="more-cue"><div class="mc"><span>SCROLL</span><span class="arr">▼</span></div></div></div>
+</div></div>
+
+<!-- ============ SPEECH BUBBLES ============ -->
+<div class="bubble" id="bub-gate">
+  <div class="bub-lbl">Step 1: Qualify the capital need</div>
+  <div class="bub-txt">“Is the $250K for one large purchase you need funded right now, or is that your total capital need over the next few months across multiple buys?”</div>
+  <div class="tail"></div>
+</div>
+<div class="bubble" id="bub-path2">
+  <div class="bub-lbl">If the $250K is spread across multiple buys:</div>
+  <div class="bub-txt">Slope is back in the conversation. The question becomes whether a $100K revolving line can service the actual purchase schedule better than a larger one-time advance.</div>
+  <div class="tail"></div>
+</div>
+<div class="bubble small" id="bub-bird">
+  <div class="bub-txt">What would make you believe the customer is still winnable?</div>
+  <div class="tail"></div>
+</div>
+
+<!-- ============ in-scene labels ============ -->
+<div class="sign" id="sg-p1">One large purchase</div>
+<div class="sign" id="sg-p2">Total capital need</div>
+<div class="sign" id="sg-exact">Exact amount needed</div>
+<div class="sign" id="sg-buffer">Comfortable buffer</div>
+<div class="chip" id="ch-s2">STEP 2</div>
+<div class="chip" id="ch-s3">STEP 3</div>
+<div class="chip" id="ch-s4">STEP 4</div>
+<div class="chip" id="ch-s5">STEP 5</div>
+<div class="chip" id="ch-s6">STEP 6</div>
+<div id="gameover">GAME OVER?</div>
+<div id="walltext">
+  <div class="wt1">What would you emphasize besides line size?</div>
+  <div class="wt2">I would emphasize the factors that determine whether the capital actually saves or makes Horizon money.</div>
+</div>
+
+<!-- ============ nav + tracker + final ============ -->
+<div id="nav"><div class="navtip" id="navtip">Explore Path 1 first</div></div>
+<div id="tracker"><div class="rail"></div><div id="tr-mark"></div></div>
+<div id="tr-label"></div>
+
+<div id="final-card"><div class="fc-inner">
+  <div class="fc-eyebrow">OVER THE HORIZON</div>
+  <div class="fc-title">Scenario 2:<br>Horizon Retail Group</div>
+  <div class="fc-rule"></div>
+  <div class="fc-fin">* FIN *</div>
+</div></div>
+
+<script>
+'use strict';
+/* ============================================================
+   Scenario 2: Horizon Retail Group — 8-bit RPG scroll journey
+   Engine ported from summit-commerce.html (scroll engine v2):
+   virtual scroll -> lerp -> magnetic station gates, uniform
+   ENTER/RELEASE/EXIT thresholds, fully reversible.
+   ============================================================ */
+const clamp=(v,a,b)=>v<a?a:v>b?b:v;
+const lerp=(a,b,t)=>a+(b-a)*t;
+const sstep=t=>{t=clamp(t,0,1);return t*t*(3-2*t);};
+const easeIO=t=>{t=clamp(t,0,1);return t<.5?2*t*t:1-Math.pow(-2*t+2,2)/2;};
+function hash1(n){const s=Math.sin(n*127.1)*43758.5453;return s-Math.floor(s);}
+function h2(i,j){const n=Math.sin(i*127.1+j*311.7)*43758.5453;return n-Math.floor(n);}
+function vnoise(x,y){const i=Math.floor(x),j=Math.floor(y),fx=x-i,fy=y-j;const sx=fx*fx*(3-2*fx),sy=fy*fy*(3-2*fy);
+  const a=h2(i,j),b=h2(i+1,j),c=h2(i,j+1),d=h2(i+1,j+1);return a+(b-a)*sx+(c-a)*sy+(a-b-c+d)*sx*sy;}
+function hexLerp(a,b,t){
+  const pa=parseInt(a.slice(1),16),pb=parseInt(b.slice(1),16);
+  const r=Math.round(lerp(pa>>16,pb>>16,t)),g=Math.round(lerp((pa>>8)&255,(pb>>8)&255,t)),bl=Math.round(lerp(pa&255,pb&255,t));
+  return `rgb(${r},${g},${bl})`;}
+
+/* ---------------- pixel buffer ---------------- */
+const cv=document.getElementById('px'),ctx=cv.getContext('2d');
+let SCALE=3,BW=480,BH=300;
+function setupBuffer(){
+  SCALE=Math.max(2,Math.round(innerHeight/300));
+  BW=Math.ceil(innerWidth/SCALE);BH=Math.ceil(innerHeight/SCALE);
+  cv.width=BW;cv.height=BH;
+  cv.style.width=(BW*SCALE)+'px';cv.style.height=(BH*SCALE)+'px';
+  ctx.imageSmoothingEnabled=false;
+}
+function pr(w,h){const c=document.createElement('canvas');c.width=w;c.height=h;const g=c.getContext('2d');g.imageSmoothingEnabled=false;return [c,g];}
+function R(g,x,y,w,h,c){g.fillStyle=c;g.fillRect(Math.round(x),Math.round(y),Math.round(w),Math.round(h));}
+function pxCircle(g,cx,cy,r,c){g.fillStyle=c;for(let dy=-r;dy<=r;dy++){const ww=Math.floor(Math.sqrt(r*r-dy*dy));g.fillRect(Math.round(cx-ww),Math.round(cy+dy),ww*2+1,1);}}
+function dither(g,x,y,w,h,c){g.fillStyle=c;for(let j=0;j<h;j++)for(let i=(j%2);i<w;i+=2)g.fillRect(Math.round(x+i),Math.round(y+j),1,1);}
+
+/* ---------------- sprites ---------------- */
+const PAL={h:'#5a3a22',s:'#eab98b',t:'#2f8a57',d:'#1e5c39',p:'#3a3553',b:'#6b4226',
+  k:'#7a4e2a',K:'#553318',w:'#f2ead2',j:'#23202e',J:'#16141f',g:'#b9b2c4',o:'#100d18',
+  e:'#f8f4e0',G:'#3f6d33',q:'#86c06c',c:'#d8cfae',m:'#8a6a3c',M:'#5e4524',r:'#e8743a',y:'#ffd24a',D:'#2c5430'};
+function buildSprite(rows,opts){
+  const o=(opts&&opts.outline)||'#0c0a14';
+  const h=rows.length,w=Math.max(...rows.map(r=>r.length));
+  const grid=[];for(let y=0;y<h;y++){grid[y]=[];for(let x=0;x<w;x++){const ch=rows[y][x]||'.';grid[y][x]=(ch==='.'||ch===' ')?null:(PAL[ch]||'#f0f');}}
+  const [c,g]=pr(w+2,h+2);
+  for(let y=0;y<h;y++)for(let x=0;x<w;x++)if(grid[y][x]){g.fillStyle=grid[y][x];g.fillRect(x+1,y+1,1,1);}
+  // auto outline
+  g.fillStyle=o;
+  for(let y=-1;y<=h;y++)for(let x=-1;x<=w;x++){
+    const filled=(y>=0&&y<h&&x>=0&&x<w&&grid[y][x]);
+    if(filled)continue;
+    let adj=false;
+    for(const [dx,dy] of [[1,0],[-1,0],[0,1],[0,-1]]){
+      const nx=x+dx,ny=y+dy;
+      if(ny>=0&&ny<h&&nx>=0&&nx<w&&grid[ny][nx]){adj=true;break;}
+    }
+    if(adj)g.fillRect(x+1,y+1,1,1);
+  }
+  return c;
+}
+function flipC(c){const [f,g]=pr(c.width,c.height);g.translate(c.width,0);g.scale(-1,1);g.drawImage(c,0,0);return f;}
+function silC(c,col){const [f,g]=pr(c.width,c.height);g.drawImage(c,0,0);g.globalCompositeOperation='source-in';g.fillStyle=col;g.fillRect(0,0,c.width,c.height);return f;}
+
+const SPR={};
+function buildSprites(){
+  const idleA=['....hhhh....','...hhhhhh...','..hhhhhhhh..','..hhhhhhhh..','..shhhhhhs..','...hhhhhh...','....dddd....','..tttttttt..','.ttkkkkkktt.','.t.kkkkkk.t.','.s.kKKKKk.s.','...kkkkkk...','...tttttt...','...dddddd...','...pp..pp...','...pp..pp...','...bb..bb...','..bbb..bbb..'];
+  const idleB=['....hhhh....','...hhhhhh...','..hhhhhhhh..','..hhhhhhhh..','..shhhhhhs..','...hhhhhh...','....dddd....','..tttttttt..','.ttkkkkkktt.','.ttkkkkkktt.','.s.kKKKKk.s.','...kkkkkk...','...tttttt...','...dddddd...','...pp..pp...','...pp..pp...','...bb..bb...','..bbb..bbb..'];
+  const body13=['....hhhh....','...hhhhhh...','..hhhhhhhh..','..hhhhhhhh..','..shhhhhhs..','...hhhhhh...','....dddd....','..tttttttt..','.ttkkkkkktt.','.t.kkkkkk.t.','.s.kKKKKk.s.','...kkkkkk...','...tttttt...','...dddddd...'];
+  const legsA=['...pp..pp...','..pp....pp..','..bb....pp..','.bbb....bbb.'];
+  const legsB=['....pppp....','....pp.pp...','....bb.bb...','...bbb.bbb..'];
+  const legsC=['...pp..pp...','..pp....pp..','..pp....bb..','.bbb....bbb.'];
+  const walk1=body13.concat(legsA),walk2=body13.concat(legsB),walk3=body13.concat(legsC),walk4=body13.concat(legsB);
+  const climbA=['.ss.........','.tt..hhhh...','.tt.hhhhhh..','.tthhhhhhhh.','..hhhhhhhh..','...hhhhhh.s.','....dddd..t.','..ttttttttt.','..tkkkkkkt..','...kkkkkk...','...kKKKKk...','...kkkkkk...','...tttttt...','...dddddd...','...pp.pp....','..pp...pp...','..bb...bb...'];
+  const carryTop=['.ss......ss.','.tt......tt.','.tt.hhhh.tt.','.tthhhhhhtt.','..hhhhhhhh..','..hhhhhhhh..','...hhhhhh...','....dddd....','..tttttttt..','..tkkkkkkt..','...kkkkkk...','...tttttt...','...dddddd...','...pp..pp...'];
+  const carry1=carryTop.concat(['..pp....pp..','..bb....pp..','.bbb....bbb.','............']);
+  const carry2=carryTop.concat(['....pp.pp...','....bb.bb...','...bbb.bbb..','............']);
+  const hangA=['.ss......ss.','.tt......tt.','.tt.hhhh.tt.','.tthhhhhhtt.','..hhhhhhhh..','..hhhhhhhh..','...hhhhhh...','....dddd....','..tttttttt..','..tkkkkkkt..','...kkkkkk...','...kKKKKk...','...tttttt...','...dddddd...','...pp..pp...','...pp..pp...','....bb.bb...'];
+  const hangB=['.ss......ss.','.tt......tt.','.tt.hhhh.tt.','.tthhhhhhtt.','..hhhhhhhh..','..hhhhhhhh..','...hhhhhh...','....dddd....','..tttttttt..','..tkkkkkkt..','...kkkkkk...','...kKKKKk...','...tttttt...','...dddddd...','...pppp.....','...pp.pp....','...bb..bb...'];
+  const crouch=['............','............','............','....hhhh....','...hhhhhh...','..hhhhhhhh..','..hhhhhhhh..','..shhhhhhs..','...hhhhhh...','....dddd....','..tttttttt..','.ttkkkkkktt.','.t.kkkkkk.t.','.ss.kkkk.ss.','..pppppppp..','..pp....pp..','..bbb..bbb..','............'];
+  const stumble=['............','.....hhhh...','....hhhhhh..','...hhhhhhhh.','...hhhhhhhh.','....hhhhhhs.','.....dddd.t.','...tttttttt.','..stkkkkkkt.','..t.kkkkkk..','....kKKKKs..','....kkkkkk..','....tttttt..','....dddddd..','....pp.pp...','...pp...pp..','...bb...bb..','............'];
+  const fall=['.ss......ss.','.tt......tt.','..t.hhhh.t..','...hhhhhh...','..hhhhhhhh..','..hhhhhhhh..','...hhhhhh...','....dddd....','..tttttttt..','...kkkkkk...','...kkkkkk...','...tttttt...','...dddddd...','..pp....pp..','.pp......pp.','.bb......bb.','............','............'];
+  const paddle1=['....hhhh......','...hhhhhh.....','...hhhsss.....','...hhhsos.....','...hhhsss.....','....hhss......','....dddd......','...tttttt.....','...tttttts....','...ttttts.....','...kttttt.....','....tttt......'];
+  const paddle2=['....hhhh......','...hhhhhh.....','...hhhsss.....','...hhhsos.....','...hhhsss.....','....hhss......','....dddd......','...tttttt.....','..sttttt......','..s.tttts.....','...ktttt......','....tttt......'];
+  const sit=['...hhhh.......','..hhhhhh......','..hhhsss......','..hhhsos......','..hhhsss......','...hhss.......','...dddd.......','..tttttt......','.s.tttttt.....','s..tttttt.....','...ttpppppp...','...ppppppppbb.','............bb'];
+  const butler=['....gggg....','...gggggg...','...ssssss...','...sossos...','...ssssss...','....ssss....','...jwwwwj...','..jjwwwwjj..','..jjwoowjj..','..jj.ww.jj..','..sj.ww.js..','...jjjjjj...','...jjjjjj...','...jj..jj...','...jj..jj...','...jj..jj...','..JJJ..JJJ..'];
+  const croc1=['......e.e.............','.....GGGGG............','..GGGGGGGGGGGGGG......','.GGGGGGGGGGGGGGGGGG...','.GDGGDGGDGGDGGGGGGGG..','..qqqqqqqqqqqqqqqqq...'];
+  const croc2=['.eGGGGG...............','..GGGGGG..............','...GGGGGGG............','....wGwGwGG...........','......GGGGGGGGGGGG....','....wGwGwGGGGGGGGGG...','...GGGGGGGGGGGGGGGGG..','..qqqqqqqqqqqqqqqqq...'];
+  const bird1=['..........','....rr....','.y.rrrr...','..orrrr...','...rrrrrr.','...rrrrr..','....rrr...','....r.r...'];
+  const bird2=['......rrr.','....rrrrr.','.y.rrrrr..','..orrrr...','...rrrr...','....rrr...','....r.r...','..........'];
+  SPR.idle=[buildSprite(idleA),buildSprite(idleB)];
+  SPR.walk=[buildSprite(walk1),buildSprite(walk2),buildSprite(walk3),buildSprite(walk4)];
+  SPR.walkDY=[0,1,0,1];
+  const cA=buildSprite(climbA);SPR.climb=[cA,flipC(cA)];
+  SPR.carry=[buildSprite(carry1),buildSprite(carry2)];
+  SPR.hang=[buildSprite(hangA),buildSprite(hangB)];
+  SPR.crouch=buildSprite(crouch);
+  SPR.stumble=buildSprite(stumble);
+  SPR.fall=buildSprite(fall);
+  SPR.paddle=[buildSprite(paddle1),buildSprite(paddle2)];
+  SPR.sit=buildSprite(sit);
+  SPR.butler=buildSprite(butler);
+  SPR.croc=[buildSprite(croc1),buildSprite(croc2)];
+  SPR.bird=[buildSprite(bird1),buildSprite(bird2)];
+  SPR.silh=silC(SPR.idle[0],'#221536');
+}
+/* draw char: x = center, y = feet line */
+function drawSpr(c,x,y){ctx.drawImage(c,Math.round(x-c.width/2),Math.round(y-c.height));}
+function drawChar(x,y,anim,t,opt){
+  opt=opt||{};
+  let c,dy=0;
+  if(anim==='idle')c=SPR.idle[Math.floor(t*1.3)%2];
+  else if(anim==='walk'){const f=Math.floor(t*7.5)%4;c=SPR.walk[f];dy=SPR.walkDY[f];}
+  else if(anim==='carry')c=SPR.carry[Math.floor(t*7)%2];
+  else if(anim==='climb')c=SPR.climb[opt.cf!==undefined?opt.cf:(Math.floor(t*4)%2)];
+  else if(anim==='hang')c=SPR.hang[Math.floor(t*1.8)%2];
+  else if(anim==='crouch')c=SPR.crouch;
+  else if(anim==='stumble')c=SPR.stumble;
+  else if(anim==='fall')c=SPR.fall;
+  else if(anim==='paddle')c=SPR.paddle[Math.floor(t*3.2)%2];
+  else if(anim==='sit')c=SPR.sit;
+  else if(anim==='silh')c=SPR.silh;
+  else c=SPR.idle[0];
+  if(opt.flip)c=opt.flipCache||(c._fl||(c._fl=flipC(c)));
+  drawSpr(c,x,y+dy);
+  return c;
+}
+
+/* ---------------- shared scene art helpers ---------------- */
+function bandedSky(g,w,h,cols,y0,y1){
+  y0=y0||0;y1=(y1===undefined)?h:y1;
+  const n=cols.length,bh=(y1-y0)/n;
+  for(let i=0;i<n;i++){
+    R(g,0,y0+i*bh,w,bh+1,cols[i]);
+    if(i>0)dither(g,0,y0+i*bh-2,w,4,cols[i]);
+  }
+}
+function stars(g,w,h,n,seed){
+  for(let i=0;i<n;i++){
+    const x=Math.floor(hash1(seed+i*3.7)*w),y=Math.floor(hash1(seed+i*7.1)*h*0.6);
+    const b=hash1(seed+i*1.3);
+    R(g,x,y,1,1,b>0.8?'#fff6d8':(b>0.45?'#9d96c0':'#565178'));
+  }
+}
+/* mountain silhouette with leaking rays (sun ball NEVER drawn here) */
+function mountainGlow(g,cx,baseY,w,hgt,col,glowOn,seed){
+  seed=seed||1;
+  const peakY=baseY-hgt;
+  if(glowOn){
+    // glow bands behind ridge
+    const bands=[['rgba(255,214,90,0.30)',hgt*0.42],['rgba(255,190,80,0.18)',hgt*0.62],['rgba(255,170,90,0.10)',hgt*0.88]];
+    for(const [c,r] of bands)pxCircle(g,cx,peakY+hgt*0.18,r,c);
+    // rays leaking around the peak
+    g.fillStyle='rgba(255,214,100,0.16)';
+    for(let k=0;k<9;k++){
+      const a=Math.PI*(0.08+0.84*(k/8))+ (hash1(seed+k)-0.5)*0.06;
+      for(let r=hgt*0.16;r<hgt*0.95;r+=3){
+        if((Math.floor(r/3)+k)%3===0)continue;
+        const x=cx+Math.cos(a)*r,y=peakY+hgt*0.14-Math.sin(a)*r;
+        if(y<baseY)g.fillRect(Math.round(x),Math.round(y),2,2);
+      }
+    }
+  }
+  // ridge silhouette (jagged random walk)
+  g.fillStyle=col;
+  let prevY=baseY;
+  for(let x=-Math.floor(w/2);x<=w/2;x+=4){
+    const f=1-Math.abs(x)/(w/2);
+    const yT=baseY-hgt*Math.pow(f,1.25)-(h2(seed,x)*10-5)*f;
+    g.fillRect(Math.round(cx+x),Math.round(yT),4,Math.round(baseY-yT)+1);
+    prevY=yT;
+  }
+}
+function jungleStrip(g,x0,x1,baseY,hgt,colDark,colLit,seed,dense){
+  // canopy blobs over a solid base so the strip never floats
+  for(let i=0;i<(x1-x0)/(dense?7:12);i++){
+    const x=x0+hash1(seed+i*2.3)*(x1-x0);
+    const r=4+hash1(seed+i*5.1)*(hgt*0.5);
+    pxCircle(g,x,baseY-hgt+r*0.7+hash1(seed+i)*6,r,colDark);
+    if(colLit&&hash1(seed+i*9.7)>0.6)pxCircle(g,x-r*0.3,baseY-hgt+r*0.5,Math.max(1,r*0.4),colLit);
+  }
+  R(g,x0,baseY-hgt*0.5,x1-x0,hgt*0.5+4,colDark);
+}
+function tree(g,x,baseY,hgt,trunkC,leafC,leaf2,seed){
+  R(g,x-1,baseY-hgt*0.55,3,hgt*0.55,trunkC);
+  pxCircle(g,x,baseY-hgt*0.62,hgt*0.30,leafC);
+  pxCircle(g,x-hgt*0.18,baseY-hgt*0.5,hgt*0.2,leafC);
+  pxCircle(g,x+hgt*0.16,baseY-hgt*0.52,hgt*0.22,leafC);
+  if(leaf2)pxCircle(g,x-2,baseY-hgt*0.72,hgt*0.16,leaf2);
+}
+function palm(g,x,baseY,hgt,seed){
+  for(let i=0;i<hgt;i++)R(g,x+Math.round(Math.sin(i*0.09+seed)*3),baseY-i,2,1,'#5e4524');
+  const ty=baseY-hgt,tx=x+Math.round(Math.sin(hgt*0.09+seed)*3);
+  for(let k=0;k<6;k++){
+    const a=Math.PI*(k/5)*0.9+0.18;
+    for(let r=0;r<10;r++){
+      const fx=tx+Math.cos(a)*r*1.4-7*0+0,fy=ty-Math.sin(a)*r*0.5+r*r*0.045;
+      R(g,fx,fy,2,1,k%2?'#3f6d33':'#2c5430');
+    }
+  }
+}
+function signpost(g,x,baseY,dir){
+  R(g,x,baseY-16,2,16,'#3a2a16');
+  R(g,x-(dir<0?9:0)+(dir<0?0:-1),baseY-15,12,5,'#5e4524');
+  R(g,x-(dir<0?8:0),baseY-14,10,3,'#3a2a16');
+}
+function firefliesMake(n,x0,x1,y0,y1,seed){
+  const a=[];for(let i=0;i<n;i++)a.push({x:x0+hash1(seed+i*3.3)*(x1-x0),y:y0+hash1(seed+i*7.7)*(y1-y0),ph:hash1(seed+i)*9,sp:0.4+hash1(seed+i*1.7)});
+  return a;
+}
+function firefliesDraw(arr,camX,t,col){
+  col=col||'#bff2e0';
+  for(const f of arr){
+    const tw=Math.sin(t*f.sp*2+f.ph);
+    if(tw<0.1)continue;
+    const x=f.x-camX+Math.sin(t*0.5+f.ph)*4,y=f.y+Math.cos(t*0.4+f.ph*2)*3;
+    R(ctx,x,y,1,1,col);
+    if(tw>0.82){R(ctx,x-1,y,3,1,'rgba(191,242,224,0.35)');R(ctx,x,y-1,1,3,'rgba(191,242,224,0.35)');}
+  }
+}
+function shimmer(x0,x1,y0,y1,t,col,sparse){
+  ctx.fillStyle=col;
+  for(let y=y0;y<y1;y+=3){
+    const off=((y*13)+Math.floor(t*22))%34;
+    for(let x=x0-34+off;x<x1;x+=34){
+      if(h2(y,3)>(sparse?0.55:0.25))ctx.fillRect(Math.round(x),Math.round(y),7,1);
+    }
+  }
+}
+
+/* ---------------- scene prerenders ---------------- */
+const SCN={};
+const APPROACH_W=1280,FW_W=960,BEACH_W=1150;
+const GATE_X=1080,GATE_W=106,BUTLER_X=830;
+const PIT_X0=84,PIT_X1=238,FORK_X=460,OASIS_X=640;
+const PART_XS=[120,200,280,360,440],BOAT_X=520;
+let GY=260;       // ground feet line (buffer px)
+let WALL_W=560,WALL_CX=300;
+const WALL_TOP=1556,CAM_MAX_Y=1500,HANG_Y=1540;
+const PAUSE_YS=[150,310,470,630,790,950,1110,1270];
+
+function buildScenes(){
+  GY=BH-36;
+  /* ---- APPROACH ---- */
+  {
+    const [sky,sg]=pr(BW,BH);
+    bandedSky(sg,BW,BH,['#070512','#0a0720','#100b2c','#171040','#211546'],0,GY-20);
+    R(sg,0,GY-20,BW,BH-GY+20,'#211546');
+    stars(sg,BW,BH,70,11);
+    const [far,fg]=pr(Math.ceil(APPROACH_W*0.25)+BW,BH);
+    jungleStrip(fg,0,far.width,GY-46,40,'#0d0a1e',null,21,false);
+    const [mid,mg]=pr(Math.ceil(APPROACH_W*0.55)+BW,BH);
+    for(let i=0;i<mid.width/34;i++)tree(mg,20+i*34+h2(7,i)*16,GY-12,46+h2(3,i)*26,'#120e26','#120e26','#1a1433',i);
+    const [main,mn]=pr(APPROACH_W+BW,BH);
+    // ground + path
+    R(mn,0,GY,main.width,BH-GY,'#161020');
+    R(mn,0,GY,main.width,3,'#2a2040');
+    for(let i=0;i<main.width/6;i++){const x=i*6+h2(1,i)*5;R(mn,x,GY+4+h2(2,i)*(BH-GY-8),2,1,'#241a35');}
+    // roadside vegetation
+    for(let i=0;i<main.width/26;i++){
+      const x=10+i*26+h2(9,i)*14;
+      if(Math.abs(x-(GATE_X+GATE_W/2))<90)continue;
+      pxCircle(mn,x,GY-2,3+h2(4,i)*4,'#142018');
+      if(h2(5,i)>0.5)tree(mn,x+8,GY,40+h2(6,i)*34,'#1b1430','#17241c','#1e3024',i*3);
+    }
+    // gate pillars + lintel (doors drawn dynamically)
+    const gx=GATE_X,gw=GATE_W,topY=GY-(BH+40);
+    R(mn,gx-16,topY,16,GY-topY,'#352c4a');R(mn,gx+gw,topY,16,GY-topY,'#352c4a');
+    R(mn,gx-16,topY,4,GY-topY,'#473d61');R(mn,gx+gw,topY,4,GY-topY,'#473d61');
+    for(let y=GY-8;y>topY;y-=22){R(mn,gx-16,y,16,3,'#241d36');R(mn,gx+gw,y,16,3,'#241d36');}
+    R(mn,gx-24,topY,gw+48,14,'#352c4a');R(mn,gx-24,topY+14,gw+48,4,'#241d36');
+    // dark interior behind doors
+    R(mn,gx,topY+14,gw,GY-topY-14,'#040309');
+    SCN.approach={layers:[{c:sky,f:0},{c:far,f:0.25},{c:mid,f:0.55},{c:main,f:1}],ff:firefliesMake(14,40,520,GY-70,GY-10,5)};
+  }
+  /* ---- JUNGLE ENTRANCE (static, world = BW) ---- */
+  {
+    const [c,g]=pr(BW,BH);
+    bandedSky(g,BW,BH,['#0a0816','#0e0d26','#151334','#1d1840'],0,GY*0.62);
+    stars(g,BW,BH,40,31);
+    mountainGlow(g,BW/2,GY*0.62,BW*0.78,GY*0.40,'#141026',true,3);
+    jungleStrip(g,0,BW,GY*0.64,26,'#0d0a1c',null,41,true);
+    R(g,0,GY*0.64-2,BW,GY-GY*0.64+2,'#0b0918');
+    R(g,0,GY,BW,BH-GY,'#101723');
+    R(g,0,GY,BW,2,'#1d2a36');
+    const cx=BW/2;
+    // dense jungle wall with two path mouths
+    for(let i=0;i<BW/8;i++){
+      const x=i*8+h2(13,i)*6;
+      if(Math.abs(x-(cx-125))<26||Math.abs(x-(cx+125))<26)continue;
+      tree(g,x,GY+2,52+h2(14,i)*40,'#0f0c20','#11221a','#173026',i*7);
+    }
+    for(const mx of [cx-125,cx+125]){
+      R(g,mx-20,GY-54,40,54,'#04030a');
+      pxCircle(g,mx,GY-54,21,'#04030a');
+      // vines over the mouth
+      for(let v=0;v<5;v++){const vx=mx-16+v*8;for(let k=0;k<10+h2(mx,v)*12;k++)R(g,vx+Math.sin(k*0.5+v)*1.5,GY-70+k*2,1,2,v%2?'#16301f':'#0f2417');}
+      signpost(g,mx+(mx<cx?26:-28),GY,mx<cx?-1:1);
+    }
+    // ground cover
+    for(let i=0;i<BW/14;i++){const x=i*14+h2(15,i)*10;pxCircle(g,x,GY+1,2+h2(16,i)*3,'#13231a');}
+    SCN.jent={c,ff:firefliesMake(20,20,BW-20,GY-90,GY-6,55),cx};
+  }
+  /* ---- FORK WORLD (pit | fork | oasis) ---- */
+  {
+    const [c,g]=pr(FW_W+BW,BH);
+    const W=c.width;
+    bandedSky(g,W,BH,['#060510','#0a0a1e','#100e28'],0,GY*0.5);
+    jungleStrip(g,0,W,GY*0.55,30,'#0c0a18',null,61,true);
+    R(g,0,GY*0.55,W,GY-GY*0.55,'#0a0814');
+    // deep background trees filling the mid band
+    for(let i=0;i<W/16;i++){const x=i*16+h2(27,i)*12;tree(g,x,GY-6,70+h2(28,i)*60,'#0d0a1c','#0e0c20','#121028',i*11);}
+    jungleStrip(g,0,W,GY*0.82,34,'#0b0916',null,67,true);
+    R(g,0,GY,W,BH-GY,'#101a14');R(g,0,GY,W,2,'#1c2e20');
+    // canopy ceiling + hanging vines
+    for(let i=0;i<W/7;i++){const x=i*7+h2(23,i)*6;pxCircle(g,x,h2(24,i)*16,14+h2(25,i)*14,'#0a0816');}
+    for(let i=0;i<W/38;i++){
+      const vx=i*38+h2(26,i)*22,vl=22+h2(29,i)*46;
+      for(let k=0;k<vl;k++){R(g,vx+Math.sin(k*0.3+i)*1.5,26+k*2,1,2,k%3?'#11241a':'#0d1c14');}
+      R(g,vx-1,26+vl*2,3,3,'#16301f');
+    }
+    // background trees
+    for(let i=0;i<W/12;i++){
+      const x=i*12+h2(33,i)*8;
+      if(x>PIT_X0-14&&x<PIT_X1+14)continue;
+      if(x>OASIS_X-20&&x<OASIS_X+210)continue;
+      tree(g,x,GY+2,48+h2(34,i)*44,'#0e0b1e','#10201a','#152a20',i*5);
+    }
+    // --- the pit
+    R(g,PIT_X0,GY-2,PIT_X1-PIT_X0,BH-GY+2,'#030208');
+    R(g,PIT_X0,BH-26,PIT_X1-PIT_X0,26,'#0e2018');
+    shimmerStatic(g,PIT_X0,PIT_X1,BH-24,BH-6,'#16352a');
+    for(let i=0;i<7;i++){const x=PIT_X0+10+i*((PIT_X1-PIT_X0-20)/7);R(g,x,BH-28+h2(43,i)*16,3,1,'#cfc8b0');}
+    R(g,PIT_X0-3,GY-2,3,4,'#1c2e20');R(g,PIT_X1,GY-2,3,4,'#1c2e20');
+    // --- fork: diverging trails
+    for(let i=0;i<26;i++){
+      R(g,FORK_X-6-i*7,GY+5+i*0.55,5,2,'#1a2a1e');
+      R(g,FORK_X+2+i*7,GY+5+i*0.55,5,2,'#1a2a1e');
+    }
+    signpost(g,FORK_X-34,GY,-1);signpost(g,FORK_X+34,GY,1);
+    // --- oasis
+    const px0=OASIS_X,px1=OASIS_X+200;
+    R(g,px0,GY+3,px1-px0,12,'#0f3a4a');
+    R(g,px0,GY+3,px1-px0,2,'#1d5d6e');
+    pxCircle(g,px0+8,GY+9,7,'#0f3a4a');pxCircle(g,px1-8,GY+9,7,'#0f3a4a');
+    // waterfall rock: stepped mossy outcrop at the pond's right end
+    R(g,px1-12,GY-22,46,30,'#2e3852');R(g,px1-12,GY-22,46,3,'#48547a');
+    R(g,px1-2,GY-40,40,18,'#28304a');R(g,px1-2,GY-40,40,3,'#3e4a6a');
+    R(g,px1+10,GY-52,34,12,'#222a40');R(g,px1+10,GY-52,34,3,'#364260');
+    for(let i=0;i<10;i++){const rx=px1-10+h2(57,i)*48,ry=GY-48+h2(58,i)*44;R(g,rx,ry,3,2,'#1a2138');}
+    pxCircle(g,px1-8,GY-22,5,'#1d3a28');pxCircle(g,px1+14,GY-40,4,'#1d3a28');pxCircle(g,px1+28,GY-52,4,'#234430');
+    // gentle light shaft over the oasis
+    for(let k=0;k<70;k++){
+      const sx0=px0+44+k*1.3,sy0=k*2.6;
+      if((k%3)===0)continue;
+      dither(g,sx0,sy0,26,3,'rgba(140,230,210,0.045)');
+    }
+    palm(g,px0-14,GY+2,34,1);palm(g,px0+52,GY+2,42,5);palm(g,px1+58,GY+2,40,9);
+    for(let i=0;i<12;i++){const x=px0+10+i*16;pxCircle(g,x,GY+2,2+h2(53,i)*2,'#1d3a28');}
+    for(let i=0;i<8;i++)R(g,px0+20+i*22,GY-1+h2(63,i)*2,1,1,'#86c06c');
+    SCN.fw={c,ff:firefliesMake(26,FORK_X-160,px1+60,GY-80,GY+4,75)};
+  }
+  /* ---- BEACH / RIVER ---- */
+  {
+    const horY=Math.round(GY-86);
+    const [sky,sg]=pr(BW,BH);
+    bandedSky(sg,BW,BH,['#0d0a20','#151238','#1f1a4a','#2c2256','#3a2c5e'],0,horY);
+    stars(sg,BW,BH*0.5,30,71);
+    const [bg,bgg]=pr(Math.ceil(BEACH_W*0.3)+BW,BH);
+    mountainGlow(bgg,bg.width-BW*0.45,horY+2,BW*0.95,horY*0.72,'#181230',true,7);
+    jungleStrip(bgg,0,bg.width,horY+4,16,'#100d24',null,81,false);
+    const [main,mn]=pr(BEACH_W+BW,BH);
+    // sand (shoreline ends at x=566; water beyond is drawn dynamically)
+    R(mn,0,GY,566,BH-GY,'#3a2f48');
+    R(mn,0,GY,566,2,'#574668');
+    R(mn,560,GY,6,BH-GY,'#2c2438');
+    for(let i=0;i<112;i++){const x=i*5+h2(91,i)*4;R(mn,x,GY+3+h2(92,i)*(BH-GY-6),1,1,'#4a3c5c');}
+    // shrub line where the beach meets the dark lowland
+    for(let i=0;i<566/9;i++){
+      const x=i*9+h2(95,i)*7;
+      pxCircle(mn,x,GY-2,3+h2(96,i)*5,'#131c2a');
+      if(h2(97,i)>0.72)pxCircle(mn,x+3,GY-7,3,'#182434');
+    }
+    // dune grass + driftwood on the left
+    for(let i=0;i<16;i++){const x=8+i*30+h2(93,i)*18;if(x>BOAT_X-30)break;
+      for(let k=0;k<4;k++)R(mn,x+k*2,GY-3-h2(94,i+k)*5,1,5,'#2c4434');}
+    R(mn,60,GY-3,26,3,'#4a3826');R(mn,300,GY-2,18,3,'#4a3826');
+    SCN.beach={layers:[{c:sky,f:0},{c:bg,f:0.3},{c:main,f:1}],horY};
+  }
+  /* ---- CLIMB WALL (vertical) ---- */
+  {
+    WALL_W=BW+80;WALL_CX=Math.round(WALL_W/2);
+    const H=WALL_TOP+BH+80;
+    const [c,g]=pr(WALL_W,H);
+    const edge=78; // left of this = open air
+    // wy->canvas y: cy = H-1-wy
+    for(let cy=0;cy<H;cy+=3)for(let cx=edge;cx<WALL_W;cx+=3){
+      const n=vnoise(cx*0.07,cy*0.07);
+      g.fillStyle=n>0.66?'#3e3658':(n>0.45?'#332c4c':(n>0.25?'#2c2540':'#262038'));
+      g.fillRect(cx,cy,3,3);
+    }
+    // jagged left rim
+    for(let cy=0;cy<H;cy+=2){
+      const rim=edge+Math.round(vnoise(3,cy*0.05)*10-5);
+      g.clearRect(0,cy,rim,2);
+      R(g,rim,cy,3,2,'#46406a');
+    }
+    // cracks
+    for(let k=0;k<46;k++){
+      let x=edge+20+hash1(201+k)*(WALL_W-edge-40),y=hash1(301+k)*H;
+      for(let s=0;s<26;s++){R(g,x,y,2,3,'#1b1730');x+=Math.round(hash1(k*7+s)*3-1.5);y+=3;}
+    }
+    // ledges
+    for(let wy=70;wy<WALL_TOP-60;wy+=86){
+      const lx=edge+30+hash1(401+wy)*(WALL_W-edge-120),lw=26+hash1(402+wy)*30;
+      const cy=H-1-wy;
+      R(g,lx,cy,lw,4,'#1f1936');R(g,lx,cy,lw,1,'#544a78');
+    }
+    // handholds along the climb line
+    for(let wy=20;wy<WALL_TOP-30;wy+=26){
+      const hx=climbX(wy)+(hash1(wy)*22-11),cy=H-1-wy;
+      R(g,hx,cy,4,3,'#4a4268');R(g,hx,cy,4,1,'#6a6090');
+      if(hash1(wy*3)>0.72){R(g,hx+5,cy-2,4,2,'#2c5430');R(g,hx+6,cy-4,3,2,'#3f6d33');}
+    }
+    // summit plateau
+    const py=H-1-WALL_TOP;
+    g.clearRect(0,0,WALL_W,py-14);
+    for(let x=0;x<WALL_W;x+=3){
+      const top=py-8+Math.round(vnoise(x*0.05,9)*6);
+      R(g,x,top,3,py-top+20,'#2c2540');R(g,x,top,3,2,'#5e5484');
+    }
+    for(let i=0;i<26;i++){const x=20+hash1(501+i)*(WALL_W-40);R(g,x,py-9+vnoise(x,3)*4,1,3,'#3f6d33');}
+    // hang ledge lip (just below plateau edge on the left rim)
+    SCN.wall={c,H,edge};
+    /* below-strip (the world far below, for the abyss) */
+    const [bl,blg]=pr(BW,70);
+    bandedSky(blg,BW,70,['#1a1438','#241c48'],0,28);
+    jungleStrip(blg,0,BW,52,18,'#11202a',null,91,true);
+    R(blg,0,52,BW,18,'#0d1a22');
+    for(let i=0;i<BW;i+=3){const yy=54+Math.sin(i*0.05)*5;R(blg,i,yy,2,2,'#1d5d6e');}
+    SCN.below=bl;
+  }
+}
+function shimmerStatic(g,x0,x1,y0,y1,col){
+  g.fillStyle=col;
+  for(let y=y0;y<y1;y+=3)for(let x=x0+(y*7)%23;x<x1;x+=23)g.fillRect(Math.round(x),Math.round(y),5,1);
+}
+function climbX(wy){return WALL_CX+Math.round(Math.sin(wy*0.013)*26+Math.sin(wy*0.031)*12);}
+
+/* ---------------- dynamic scene pieces ---------------- */
+function drawLayers(layers,camX){
+  for(const l of layers)ctx.drawImage(l.c,Math.round(-camX*l.f),0);
+}
+function drawGateDoors(camX,doorP,t){
+  const gx=GATE_X-camX,gw=GATE_W,topY=GY-(BH+40)+14;
+  const slide=Math.round(sstep(doorP)*(gw/2+4));
+  // light from beyond
+  if(doorP>0.02){
+    const gap=Math.max(2,slide*2);
+    R(ctx,gx+gw/2-gap/2,topY,gap,GY-topY,'#fff3c4');
+    R(ctx,gx+gw/2-gap/2-4,topY,4,GY-topY,'rgba(255,243,196,0.4)');
+    R(ctx,gx+gw/2+gap/2,topY,4,GY-topY,'rgba(255,243,196,0.4)');
+  }
+  for(const side of [-1,1]){
+    const dx=side<0?gx-slide:gx+gw/2+slide;
+    const x0=Math.max(side<0?gx-16:gx+gw/2,Math.min(side<0?gx+gw/2:gx+gw+16,dx));
+    const wD=gw/2;
+    const cx0=side<0?dx:dx;
+    ctx.save();
+    ctx.beginPath();ctx.rect(Math.round(gx),Math.round(topY),Math.round(gw),Math.round(GY-topY));ctx.clip();
+    R(ctx,cx0,topY,wD,GY-topY,'#d8a93c');
+    R(ctx,cx0,topY,wD,4,'#f0c75e');
+    for(let y=topY+10;y<GY;y+=26){R(ctx,cx0+3,y,wD-6,2,'#8a6420');}
+    for(let y=topY+18;y<GY;y+=26){R(ctx,cx0+5,y,2,2,'#6e4f18');R(ctx,cx0+wD-8,y,2,2,'#6e4f18');}
+    R(ctx,side<0?cx0+wD-3:cx0,topY,3,GY-topY,'#8a6420');
+    // half of the sun emblem on each door
+    const ecx=gx+gw/2+(side<0?-slide:slide),ecy=GY-120;
+    ctx.save();ctx.beginPath();ctx.rect(Math.round(side<0?cx0:cx0),Math.round(topY),Math.round(wD),Math.round(GY-topY));ctx.clip();
+    pxCircle(ctx,ecx,ecy,17,'#f5df8a');pxCircle(ctx,ecx,ecy,12,'#b8862a');pxCircle(ctx,ecx,ecy,8,'#f5df8a');
+    for(let k=0;k<8;k++){const a=k*Math.PI/4+0.39;R(ctx,ecx+Math.cos(a)*22-1,ecy+Math.sin(a)*22-1,3,3,'#f5df8a');}
+    ctx.restore();
+    ctx.restore();
+  }
+  // torch flames on pillars
+  for(const tx of [GATE_X-8-camX,GATE_X+GATE_W+8-camX]){
+    const fy=GY-150,fl=Math.floor(t*9)%3;
+    R(ctx,tx-1,fy-26,4,8,'#5e4524');
+    R(ctx,tx-1,fy-30+fl,4,4-fl,'#ff9438');R(ctx,tx,fy-32+fl,2,2,'#ffd24a');
+  }
+}
+function drawBoat(x,y,stage,t,inWater){
+  const bob=inWater?Math.round(Math.sin(t*2.2)*1.5):0;
+  y+=bob;
+  if(stage>=1){R(ctx,x-22,y-3,44,4,'#6b4226');R(ctx,x-18,y+1,36,2,'#553318');}
+  if(stage>=2){R(ctx,x-24,y-8,6,6,'#7a4e2a');R(ctx,x+18,y-8,6,6,'#7a4e2a');R(ctx,x-20,y-7,40,4,'#7a4e2a');}
+  if(stage>=3){R(ctx,x-20,y-9,40,2,'#8a6a3c');R(ctx,x-6,y-8,12,2,'#553318');}
+  if(stage>=4){R(ctx,x+4,y-34,3,26,'#5e4524');R(ctx,x-8,y-32,24,2,'#5e4524');}
+  if(stage>=5){R(ctx,x-7,y-31,22,5,'#d8cfae');R(ctx,x-7,y-31,22,1,'#b8ae8c');R(ctx,x-26,y-10,3,8,'#8a6a3c');}
+  return bob;
+}
+function drawPart(i,x,y){
+  switch(i){
+    case 0:R(ctx,x-8,y-3,16,3,'#6b4226');R(ctx,x-6,y-5,12,2,'#7a4e2a');break;
+    case 1:R(ctx,x-7,y-2,14,2,'#7a4e2a');R(ctx,x-7,y-4,14,2,'#6b4226');R(ctx,x-7,y-6,14,2,'#7a4e2a');break;
+    case 2:R(ctx,x-6,y-6,3,6,'#7a4e2a');R(ctx,x+3,y-6,3,6,'#7a4e2a');R(ctx,x-2,y-5,4,5,'#553318');break;
+    case 3:R(ctx,x-1,y-14,3,14,'#5e4524');R(ctx,x-6,y-12,12,2,'#5e4524');break;
+    case 4:R(ctx,x-7,y-5,14,5,'#d8cfae');R(ctx,x-7,y-3,14,1,'#b8ae8c');break;
+  }
+}
+function drawPaddleStroke(hx,hy,ph){
+  const fw=ph<0.5;
+  const dx=fw?8:2,dy=6;
+  R(ctx,hx,hy,2,2,'#8a6a3c');
+  for(let k=0;k<7;k++)R(ctx,hx+dx*(k/7),hy+k*1.3,2,2,'#8a6a3c');
+  R(ctx,hx+dx-1,hy+9,4,5,'#6b4226');
+}
+function drawWaterfall(x,y0,y1,t){
+  for(let y=y0;y<y1;y+=2){
+    const ph=(y+Math.floor(t*44))%10;
+    R(ctx,x,y,2,2,'#4e8aa6');
+    R(ctx,x+2,y,4,2,ph<6?'#bfe8f2':'#8fcfe0');
+    R(ctx,x+6,y,2,2,'#4e8aa6');
+    if(ph===0)R(ctx,x+2,y,4,1,'#eafaff');
+  }
+  for(let k=0;k<7;k++){
+    const sx=x-3+h2(77,k)*16,sy=y1-1-h2(78,k)*4;
+    if((Math.floor(t*9)+k)%3)R(ctx,sx,sy,1,1,'#cfeef8');
+  }
+}
+const PARTS=[];
+function spawnP(x,y,vx,vy,life,col,n){
+  for(let i=0;i<(n||1);i++)PARTS.push({x,y,vx:vx+(Math.random()-0.5)*18,vy:vy+(Math.random()-0.5)*14,l:life*(0.6+Math.random()*0.7),col});
+}
+function drawParts(dt){
+  for(let i=PARTS.length-1;i>=0;i--){
+    const p=PARTS[i];p.l-=dt;if(p.l<=0){PARTS.splice(i,1);continue;}
+    p.x+=p.vx*dt;p.y+=p.vy*dt;p.vy+=30*dt;
+    R(ctx,p.x,p.y,1,1,p.col);
+  }
+}
+/* ============================= stations ============================= */
+const STN={
+  email:{label:'EXERCISE 2A'}, mental:{label:'MENTAL MODEL'},
+  bgate:{label:'STEP 1',bubble:'bub-gate',anchor:'head'},
+  fork:{label:'THE FORK'}, croc:{label:'CROC PIT'}, oasis:{label:'THE OASIS'},
+  bpath2:{label:'PATH 2',bubble:'bub-path2',anchor:'head'},
+  s2:{label:'STEP 2'},s3:{label:'STEP 3'},s4:{label:'STEP 4'},s5:{label:'STEP 5'},s6:{label:'STEP 6'},
+  p1:{label:'PAUSE 1/8'},p2:{label:'PAUSE 2/8'},p3:{label:'PAUSE 3/8'},p4:{label:'PAUSE 4/8'},
+  p5:{label:'PAUSE 5/8'},p6:{label:'PAUSE 6/8'},p7:{label:'PAUSE 7/8'},p8:{label:'PAUSE 8/8'},
+  bbird:{label:'THE BIRD',bubble:'bub-bird',anchor:'bird'},
+  win:{label:'STILL WINNABLE?'},
+};
+for(const id in STN){
+  const st=STN[id];
+  if(st.bubble){st.el=document.getElementById(st.bubble);st.isBub=true;continue;}
+  st.el=document.getElementById('pp-'+id);
+  st.card=st.el.querySelector('.card');
+  st.scroller=st.el.querySelector('.card-scroller');
+  st.content=st.el.querySelector('.card-content');
+  st.cue=st.el.querySelector('.more-cue');
+  st._shown=false;
+}
+
+/* ============================= plans ============================= */
+const MAIN_PLAN=[
+  {t:'hero',vh:0.95,sc:'approach',x:60},
+  {t:'tr',vh:1.35,sc:'approach',x0:60,x1:330},
+  {t:'st',id:'email',sc:'approach',x:330},
+  {t:'tr',vh:1.15,sc:'approach',x0:330,x1:790},
+  {t:'st',id:'mental',sc:'approach',x:790},
+  {t:'tr',vh:0.95,sc:'approach',x0:790,x1:1042},
+  {t:'st',id:'bgate',sc:'approach',x:1042},
+  {t:'tr',vh:1.1,sc:'gateopen'},
+  {t:'tr',vh:0.7,sc:'jent',fadeIn:1},
+  {t:'hold',vh:0.55,sc:'jent',hub:1},
+  {t:'st',id:'bpath2',sc:'jent'},
+  {t:'tr',vh:0.85,sc:'p2go'},
+  {t:'tr',vh:0.9,sc:'beach',fadeIn:1,x0:30,x1:PART_XS[0]},
+  {t:'st',id:'s2',sc:'beach',x:PART_XS[0]},
+  {t:'tr',vh:1.05,sc:'beach',carry:0},
+  {t:'st',id:'s3',sc:'beach',x:PART_XS[1]},
+  {t:'tr',vh:1.0,sc:'beach',carry:1},
+  {t:'st',id:'s4',sc:'beach',x:PART_XS[2]},
+  {t:'tr',vh:1.0,sc:'beach',carry:2},
+  {t:'st',id:'s5',sc:'beach',x:PART_XS[3]},
+  {t:'tr',vh:0.95,sc:'beach',carry:3},
+  {t:'st',id:'s6',sc:'beach',x:PART_XS[4]},
+  {t:'tr',vh:0.85,sc:'beach',carry:4,last:1},
+  {t:'tr',vh:1.5,sc:'cross'},
+  {t:'tr',vh:0.8,sc:'climb',base:1,fadeIn:1},
+  {t:'tr',vh:0.7,sc:'climb',y0:0,y1:PAUSE_YS[0]},
+  {t:'st',id:'p1',sc:'climb',y:PAUSE_YS[0]},
+  {t:'tr',vh:0.68,sc:'climb',y0:PAUSE_YS[0],y1:PAUSE_YS[1],flavor:'slip'},
+  {t:'st',id:'p2',sc:'climb',y:PAUSE_YS[1]},
+  {t:'tr',vh:0.66,sc:'climb',y0:PAUSE_YS[1],y1:PAUSE_YS[2]},
+  {t:'st',id:'p3',sc:'climb',y:PAUSE_YS[2]},
+  {t:'tr',vh:0.68,sc:'climb',y0:PAUSE_YS[2],y1:PAUSE_YS[3],flavor:'slip'},
+  {t:'st',id:'p4',sc:'climb',y:PAUSE_YS[3]},
+  {t:'tr',vh:0.7,sc:'climb',y0:PAUSE_YS[3],y1:PAUSE_YS[4],flavor:'dangle'},
+  {t:'st',id:'p5',sc:'climb',y:PAUSE_YS[4]},
+  {t:'tr',vh:0.66,sc:'climb',y0:PAUSE_YS[4],y1:PAUSE_YS[5]},
+  {t:'st',id:'p6',sc:'climb',y:PAUSE_YS[5]},
+  {t:'tr',vh:0.68,sc:'climb',y0:PAUSE_YS[5],y1:PAUSE_YS[6],flavor:'slip'},
+  {t:'st',id:'p7',sc:'climb',y:PAUSE_YS[6]},
+  {t:'tr',vh:0.66,sc:'climb',y0:PAUSE_YS[6],y1:PAUSE_YS[7]},
+  {t:'st',id:'p8',sc:'climb',y:PAUSE_YS[7]},
+  {t:'tr',vh:0.95,sc:'climb',leap:1,y0:PAUSE_YS[7],y1:HANG_Y},
+  {t:'st',id:'bbird',sc:'climb',y:HANG_Y,hang:1},
+  {t:'st',id:'win',sc:'climb',y:HANG_Y,hang:1},
+  {t:'tr',vh:0.95,sc:'summitup'},
+  {t:'fin',vh:2.7,sc:'fin'},
+];
+const FORK_PLAN=[
+  {t:'tr',vh:0.6,sc:'fw',fadeIn:1,x0:FORK_X-26,x1:FORK_X},
+  {t:'st',id:'fork',sc:'fw',x:FORK_X},
+  {t:'hold',vh:0.5,sc:'fw',end:1},
+];
+const CROC_PLAN=[
+  {t:'tr',vh:1.0,sc:'fw',croc:1},
+  {t:'st',id:'croc',sc:'fw',crocSt:1},
+  {t:'hold',vh:0.45,sc:'fw',crocSt:1,end:1},
+];
+const OASIS_PLAN=[
+  {t:'tr',vh:1.05,sc:'fw',oasis:1},
+  {t:'st',id:'oasis',sc:'fw',sit:1},
+  {t:'hold',vh:0.45,sc:'fw',sit:1,end:1},
+];
+
+/* uniform thresholds (identical to summit-commerce engine) */
+const ENTER=180,RELEASE=180,EXIT=180;
+function makeTL(plan){return{plan,segs:[],stationSegs:[],totalPx:10,target:0,smooth:0,hubSeg:null,carryMids:[]};}
+const TLS={main:makeTL(MAIN_PLAN),fork:makeTL(FORK_PLAN),croc:makeTL(CROC_PLAN),oasis:makeTL(OASIS_PLAN)};
+let mode='main';
+const STATE={path1Visited:false,crocVisited:false,oasisVisited:false,path2Entered:false,unlockAnimDone:false};
+
+function buildSegments(tl){
+  tl.segs=[];tl.stationSegs=[];tl.carryMids=[];let acc=0;
+  const vh=innerHeight;
+  for(const p of tl.plan){
+    const s={...p,start:acc};
+    if(p.t==='st'){
+      const st=STN[p.id];
+      st.ovf=st.isBub?0:Math.max(0,st.scroller.scrollHeight-st.scroller.clientHeight);
+      s.ovf=st.ovf;
+      s.px=ENTER+st.ovf+RELEASE+EXIT;
+      tl.stationSegs.push(s);
+    }else{
+      s.px=Math.round(vh*p.vh);
+      if(p.hub)tl.hubSeg=s;
+    }
+    acc+=s.px;s.end=acc;tl.segs.push(s);
+    if(p.carry!==undefined)tl.carryMids.push(s.start+s.px*0.5);
+  }
+  tl.totalPx=acc;
+}
+function segAt(tl,s){for(const sg of tl.segs)if(s<sg.end)return sg;return tl.segs[tl.segs.length-1];}
+function applyGates(tl){
+  for(const g of tl.stationSegs){
+    const A=g.start,B=A+ENTER,C=B+g.ovf;
+    if(tl.smooth<C-2){
+      const lim=(tl.smooth<A-2)?B+40:C+RELEASE*0.5;
+      if(tl.target>lim)tl.target=lim;
+      break;
+    }
+  }
+  for(let i=tl.stationSegs.length-1;i>=0;i--){
+    const g=tl.stationSegs[i];
+    const B=g.start+ENTER,C=B+g.ovf,D=C+RELEASE,E=g.end;
+    if(tl.smooth>B+2){
+      const lim=(tl.smooth>E+2)?D-40:B-ENTER*0.5;
+      if(tl.target<lim)tl.target=lim;
+      break;
+    }
+  }
+  if(mode==='main'&&!STATE.path2Entered&&tl.hubSeg){
+    const lim=tl.hubSeg.end-2;
+    if(tl.target>lim)tl.target=lim;
+  }
+  tl.target=clamp(tl.target,0,tl.totalPx-2);
+}
+function stationPhase(seg,s){
+  const local=clamp(s-seg.start,0,seg.px);
+  const ovf=seg.ovf||0,bodyEnd=seg.px-EXIT;
+  let vis;
+  if(local<ENTER)vis=sstep(local/ENTER);
+  else if(local>bodyEnd)vis=1-sstep((local-bodyEnd)/EXIT);
+  else vis=1;
+  const contentY=clamp(local-ENTER,0,ovf);
+  const nudge=clamp((local-ENTER-ovf)/RELEASE,0,1);
+  const hint=ovf>4&&contentY<ovf-10&&vis>0.85;
+  return{vis,contentY,nudge,hint};
+}
+function applyStation(id,ph){
+  const st=STN[id];
+  if(ph.vis<=0.002){
+    if(st._shown){st.el.style.opacity='0';st.el.style.visibility='hidden';st._shown=false;}
+    return;
+  }
+  st._shown=true;
+  st.el.style.visibility='visible';
+  st.el.style.opacity=ph.vis.toFixed(3);
+  st.card.style.transform=`translateY(${((1-ph.vis)*26-ph.nudge*10).toFixed(2)}px) scale(${(0.97+0.03*ph.vis).toFixed(4)})`;
+  st.content.style.transform=`translateY(${(-ph.contentY).toFixed(1)}px)`;
+  st.cue.style.opacity=ph.hint?'1':'0';
+}
+function applyBubble(id,ph){
+  const st=STN[id];
+  const a=ANCH[st.anchor];
+  if(ph.vis<=0.002||!a){
+    if(st._shown){st.el.style.opacity='0';st.el.style.visibility='hidden';st._shown=false;}
+    return;
+  }
+  st._shown=true;
+  const sx=a.x*SCALE,sy=a.y*SCALE;
+  st.el.style.visibility='visible';
+  st.el.style.opacity=Math.min(1,ph.vis*1.3).toFixed(3);
+  st.el.style.transform=`translate(${(sx-66).toFixed(1)}px,${(sy-26).toFixed(1)}px) translateY(-100%) scale(${(0.72+0.28*ph.vis).toFixed(3)})`;
+}
+
+/* ============================= scroll input ============================= */
+window.addEventListener('wheel',e=>{
+  e.preventDefault();
+  let d=e.deltaY;
+  if(e.deltaMode===1)d*=16;else if(e.deltaMode===2)d*=innerHeight;
+  d=clamp(d,-420,420);
+  const tl=TLS[mode];
+  tl.target=clamp(tl.target+d,0,tl.totalPx-2);
+},{passive:false});
+window.addEventListener('keydown',e=>{
+  if(e.key==='c'||e.key==='C'){document.getElementById('crt').classList.toggle('off');return;}
+  const vh=innerHeight;
+  const map={ArrowDown:140,ArrowUp:-140,PageDown:vh*0.8,PageUp:-vh*0.8,' ':(e.shiftKey?-vh*0.8:vh*0.8),Home:-1e9,End:1e9};
+  if(map[e.key]===undefined)return;
+  e.preventDefault();
+  const tl=TLS[mode];
+  tl.target=clamp(tl.target+map[e.key],0,tl.totalPx-2);
+});
+
+/* ============================= transitions / nav ============================= */
+let trans=null; // {phase:'out'|'in',k,after}
+function go(after){if(trans)return;trans={phase:'out',k:0,after};}
+function hideAllStations(){for(const id in STN){const st=STN[id];if(st._shown){st.el.style.opacity='0';st.el.style.visibility='hidden';st._shown=false;}}}
+function unlocked(){return STATE.crocVisited&&STATE.oasisVisited;}
+const ACTIONS={
+  path1(){if(mode!=='main'||trans)return;STATE.path1Visited=true;go(()=>{mode='fork';TLS.fork.target=TLS.fork.smooth=0;hideAllStations();});},
+  path2(){
+    if(mode!=='main'||trans)return;
+    if(!unlocked()){const tip=document.getElementById('navtip');tip.classList.add('show');
+      const b=NAVEL.querySelector('[data-id=path2]');if(b){b.classList.add('shake');setTimeout(()=>b.classList.remove('shake'),600);}
+      clearTimeout(tip._t);tip._t=setTimeout(()=>tip.classList.remove('show'),1700);return;}
+    STATE.path2Entered=true;
+    const bp=TLS.main.stationSegs.find(s=>s.id==='bpath2');
+    TLS.main.target=bp.start+ENTER+10;
+  },
+  exact(){if(mode!=='fork'||trans)return;mode='croc';TLS.croc.target=TLS.croc.smooth=0;hideAllStations();},
+  buffer(){if(mode!=='fork'||trans)return;mode='oasis';TLS.oasis.target=TLS.oasis.smooth=0;hideAllStations();},
+  backfork(){if((mode!=='croc'&&mode!=='oasis')||trans)return;go(()=>{mode='fork';TLS.fork.target=TLS.fork.smooth=TLS.fork.totalPx-2;hideAllStations();});},
+  backent(){if((mode!=='fork'&&mode!=='oasis')||trans)return;go(()=>{mode='main';const h=TLS.main.hubSeg;TLS.main.target=TLS.main.smooth=h.start+h.px*0.6;hideAllStations();});},
+};
+const NAVEL=document.getElementById('nav');
+let navSig='';
+function setNav(list){
+  const sig=list.map(b=>b.id+(b.lock?'L':'')+(b.tick?'T':'')+(b.anim?'A':'')).join('|');
+  if(sig===navSig)return;navSig=sig;
+  [...NAVEL.querySelectorAll('.nbtn')].forEach(b=>b.remove());
+  for(const b of list){
+    const el=document.createElement('div');
+    el.className='nbtn'+(b.lock?' locked':'')+(b.anim?' unlocking':'');
+    el.dataset.id=b.id;
+    el.innerHTML=(b.lock||b.anim?'<span class="lockic"></span>':'')+'<span>'+b.label+'</span>'+(b.tick?'<span class="tick">✓</span>':'');
+    el.addEventListener('click',()=>ACTIONS[b.id]());
+    NAVEL.appendChild(el);
+  }
+}
+
+/* ============================= scene DOM anchors ============================= */
+let ANCH={};
+const SDOM={
+  sgp1:document.getElementById('sg-p1'),sgp2:document.getElementById('sg-p2'),
+  sgE:document.getElementById('sg-exact'),sgB:document.getElementById('sg-buffer'),
+  chips:[2,3,4,5,6].map(n=>document.getElementById('ch-s'+n)),
+  go:document.getElementById('gameover'),wall:document.getElementById('walltext'),
+};
+const domShown=new Set();
+function showDom(el,sx,sy,op){
+  domShown.add(el);
+  el.style.visibility='visible';
+  el.style.opacity=(op===undefined?1:op).toFixed(3);
+  if(sx!==undefined)el.style.transform=`translate(${(sx*SCALE).toFixed(1)}px,${(sy*SCALE).toFixed(1)}px) translate(-50%,-100%)`;
+}
+function flushDom(){
+  const all=[SDOM.sgp1,SDOM.sgp2,SDOM.sgE,SDOM.sgB,...SDOM.chips,SDOM.go,SDOM.wall];
+  for(const el of all)if(!domShown.has(el)){el.style.visibility='hidden';el.style.opacity='0';}
+  domShown.clear();
+}
+
+/* ============================= scene rendering ============================= */
+function drawApproachScene(charX,anim,doorP,t){
+  const camX=clamp(charX-BW*0.45,0,Math.max(0,APPROACH_W-BW+80));
+  drawLayers(SCN.approach.layers,camX);
+  drawGateDoors(camX,doorP,t);
+  firefliesDraw(SCN.approach.ff,camX,t,'#8fd8c0');
+  // butler
+  const bx=BUTLER_X-camX;
+  if(bx>-20&&bx<BW+20)drawSpr(SPR.butler,bx,GY+Math.round(Math.sin(t*1.4)*0.8));
+  if(doorP<0.95)drawChar(charX-camX,GY,anim,t);
+  ANCH.head={x:charX-camX,y:GY-22};
+  return camX;
+}
+function drawJentScene(charX,anim,t,walkP){
+  ctx.drawImage(SCN.jent.c,0,0);
+  const cx=SCN.jent.cx;
+  firefliesDraw(SCN.jent.ff,0,t);
+  drawChar(charX,GY,anim,t,{flip:false});
+  ANCH.head={x:charX,y:GY-22};
+  showDom(SDOM.sgp1,cx-99,GY-18);
+  showDom(SDOM.sgp2,cx+99,GY-18);
+}
+function drawFWScene(focusX,charX,anim,flip,crocPhase,sitMode,t){
+  const camX=clamp(focusX-BW*0.48,0,FW_W-BW+60);
+  ctx.drawImage(SCN.fw.c,Math.round(-camX),0);
+  // crocs
+  const cs=[{x:112,ph:0},{x:158,ph:2.2},{x:208,ph:4.1}];
+  for(let i=0;i<cs.length;i++){
+    const c=cs[i];
+    const open=(crocPhase>0&&crocPhase<0.62&&i===2);
+    const spr=open?SPR.croc[1]:SPR.croc[0];
+    const y=BH-18+Math.round(Math.sin(t*1.1+c.ph)*1.5)-(open?6:0);
+    drawSpr(spr,c.x-camX,y);
+  }
+  // waterfall + pond shimmer
+  drawWaterfall(OASIS_X+183-camX,GY-48,GY+6,t);
+  shimmer(OASIS_X+4-camX,OASIS_X+196-camX,GY+5,GY+13,t,'rgba(110,200,220,0.35)',true);
+  firefliesDraw(SCN.fw.ff,camX,t);
+  // char
+  if(crocPhase>=0){
+    if(crocPhase<0.7){
+      const sink=Math.round(crocPhase*30);
+      drawChar(216-camX,GY+8+sink,'fall',t);
+    }
+    if(crocPhase>0.18&&crocPhase<0.5&&Math.floor(t*10)%2)spawnP(216-camX,BH-26,0,-26,0.5,'#bfe8f2',2);
+  }else if(charX!==null){
+    drawChar(charX-camX,GY,anim,t,{flip});
+  }
+  ANCH.head={x:(charX===null?216:charX)-camX,y:GY-22};
+  showDom(SDOM.sgE,FORK_X-33-camX,GY-17);
+  showDom(SDOM.sgB,FORK_X+35-camX,GY-17);
+  return camX;
+}
+function boatStage(smooth){
+  let n=0;for(const m of TLS.main.carryMids)if(smooth>m)n++;
+  return n;
+}
+function drawBeachScene(focusX,charX,anim,carryIdx,stage,inBoat,t,smooth){
+  const camX=clamp(focusX-BW*0.45,0,BEACH_W-BW+60);
+  const horY=SCN.beach.horY;
+  drawLayers(SCN.beach.layers.slice(0,2),camX);
+  R(ctx,0,horY+6,BW,GY-horY-4,'#0f0c20'); // dark lowland behind the shore
+  // water (dynamic) right of shoreline, far-water band above
+  const wx=Math.max(0,560-camX-6);
+  R(ctx,wx,horY+6,BW-wx+2,GY-2-(horY+6),'#15233e');
+  R(ctx,wx,GY-2,BW-wx+2,BH-GY+2,'#1a3050');
+  R(ctx,wx,GY-2,BW-wx+2,2,'#2c5a78');
+  shimmer(wx,BW,horY+10,GY-4,t,'rgba(90,140,190,0.25)',true);
+  shimmer(wx,BW,GY,BH-4,t,'rgba(120,180,220,0.3)',false);
+  // sand layer on top
+  ctx.drawImage(SCN.beach.layers[2].c,Math.round(-camX),0);
+  // boat under construction / sailing
+  const bx=(inBoat?focusX:BOAT_X)-camX;
+  const bob=drawBoat(bx,GY+(inBoat?4:0),stage,t,inBoat);
+  // remaining parts + chips
+  for(let i=0;i<5;i++){
+    const segs=TLS.main.segs;
+    const carrySeg=segs.find(s=>s.carry===i);
+    const taken=carrySeg&&smooth>carrySeg.start+4;
+    if(!taken){
+      drawPart(i,PART_XS[i]-camX,GY+1);
+      const cx=PART_XS[i]-camX;
+      if(cx>-30&&cx<BW+30)showDom(SDOM.chips[i],cx,GY-(i===3?18:10));
+    }
+  }
+  // char
+  if(inBoat){
+    drawChar(bx-2,GY+1+bob-6,'paddle',t);
+    drawPaddleStroke(bx+6,GY-4+bob,(t*3.2)%1);
+    if(Math.floor(t*7)%3===0)spawnP(bx+10,GY+2,8,-12,0.5,'#9fd0e8',1);
+  }else if(charX!==null){
+    drawChar(charX-camX,GY,anim,t);
+    if(carryIdx>=0)drawPart(carryIdx,charX-camX,GY-22);
+  }
+  ANCH.head={x:(inBoat?bx:charX-camX),y:GY-24};
+  return camX;
+}
+function drawTopRays(s,t){
+  if(s<=0.02)return;
+  R(ctx,0,0,BW,3,`rgba(255,206,100,${(0.18*s).toFixed(3)})`);
+  dither(ctx,0,3,BW,5,`rgba(255,206,100,${(0.22*s).toFixed(3)})`);
+  ctx.fillStyle=`rgba(255,206,100,${(0.10*s).toFixed(3)})`;
+  for(let k=0;k<6;k++){
+    const x0=(k*BW/5+Math.sin(t*0.2+k)*8);
+    for(let y=0;y<60*s;y+=3){
+      if((Math.floor(y/3)+k)%3===0)continue;
+      ctx.fillRect(Math.round(x0+y*0.22),y,2,2);
+    }
+  }
+}
+function drawClimbScene(chY,anim,opts,t){
+  opts=opts||{};
+  const camY=clamp(chY-BH*0.45,0,CAM_MAX_Y);
+  const chX=climbX(chY)+(opts.walkOff||0);
+  const camX=clamp(climbX(Math.max(0,chY))-BW/2,0,WALL_W-BW);
+  const f=camY/CAM_MAX_Y;
+  // sky
+  bandedSky(ctx,BW,BH,[hexLerp('#0c0918','#1c1440',f),hexLerp('#100c24','#2a1c50',f),hexLerp('#151030','#3a2858',f)],0,BH);
+  // the world far below (abyss, recedes as we climb)
+  const byY=BH-92+camY*0.16;
+  if(byY<BH)ctx.drawImage(SCN.below,0,Math.round(byY));
+  R(ctx,0,Math.round(byY),BW,BH-byY,`rgba(20,16,42,${clamp(0.25+f*0.7,0,0.85)})`);
+  // wall
+  const offY=BH-43-SCN.wall.H+camY;
+  ctx.drawImage(SCN.wall.c,Math.round(-camX),Math.round(offY));
+  // base ground
+  const gScreen=(BH-44)-(0-camY);
+  if(gScreen<BH+40){
+    R(ctx,0,gScreen+16,BW,Math.max(0,BH-gScreen-16+30),'#1a1428');
+    R(ctx,0,gScreen+16,BW,2,'#2c2444');
+    for(let i=0;i<BW/9;i++)R(ctx,i*9+h2(99,i)*6,gScreen+19+h2(98,i)*9,2,1,'#262038');
+  }
+  drawTopRays(clamp(f*1.2-0.1,0,1),t);
+  // wall text anchor
+  if(camY<300&&mode==='main'){
+    const wy=110,sy=(BH-44)-(wy-camY);
+    const op=clamp(1-camY/280,0,1);
+    SDOM.wall.style.transform=`translate(-50%,0) translateY(${((sy*SCALE)-innerHeight*0.30).toFixed(1)}px)`;
+    domShown.add(SDOM.wall);
+    SDOM.wall.style.visibility='visible';SDOM.wall.style.opacity=op.toFixed(3);
+  }
+  // hero
+  const feetY=(BH-44)-(chY-camY);
+  const cf=Math.floor(chY/13)%2;
+  drawChar(chX-camX,Math.round(feetY),anim,t,{cf});
+  // bird
+  if(opts.birdP>0){
+    const bp=sstep(opts.birdP);
+    const tx=chX-camX+36,ty=feetY-4;
+    const fx=lerp(BW+20,tx,bp),fy=ty-Math.sin(bp*Math.PI)*30;
+    R(ctx,tx-2,ty+1,12,2,'#553318');
+    R(ctx,tx+8,ty-1,3,2,'#3f6d33');
+    const spr=(bp<0.98)?SPR.bird[Math.floor(t*8)%2]:SPR.bird[0];
+    drawSpr(spr,fx,fy);
+    ANCH.bird={x:fx,y:fy-12};
+  }
+  ANCH.head={x:chX-camX,y:feetY-22};
+  if(opts.slipDust&&Math.floor(t*9)%2)spawnP(chX-camX+4,feetY-6,6,18,0.5,'#6a6090',2);
+  return{camY,feetY};
+}
+function drawSummitScene(charX,anim,sunP,t){
+  const horY=Math.round(BH*0.52),ridgeY=BH-56;
+  const e=sstep(clamp(sunP*1.18,0,1));
+  const pre=['#191338','#241a4a','#34245c','#4a2f63','#5e3a60','#6e4258'];
+  const post=['#3a2a6e','#6e4488','#b85a70','#e87850','#ff9c3c','#ffc966'];
+  const bands=pre.map((c,i)=>hexLerp(c,post[i],e));
+  bandedSky(ctx,BW,BH,bands,0,horY);
+  const sx=Math.round(BW*0.52);
+  const riseP=sstep(clamp((sunP-0.16)/0.55,0,1));
+  // THE sun — the only time its ball is ever visible
+  if(riseP>0.01){
+    const cy=horY+15-Math.round(riseP*36);
+    ctx.save();ctx.beginPath();ctx.rect(0,0,BW,horY);ctx.clip();
+    pxCircle(ctx,sx,cy,20,`rgba(255,180,80,${(0.35*riseP).toFixed(3)})`);
+    pxCircle(ctx,sx,cy,15,'#ff9438');
+    pxCircle(ctx,sx,cy,11,'#ffd24a');
+    pxCircle(ctx,sx,cy,7,'#fff6d8');
+    // god rays
+    ctx.fillStyle=`rgba(255,214,120,${(0.16*riseP).toFixed(3)})`;
+    for(let k=0;k<12;k++){
+      const a=k*Math.PI/6+t*0.045;
+      for(let r=22;r<150;r+=4){
+        if((Math.floor(r/4)+k)%3===0)continue;
+        const x=sx+Math.cos(a)*r,y=cy-Math.abs(Math.sin(a))*r*0.55-(Math.cos(a)<0?0:0);
+        const yy=cy+Math.sin(a)*r*0.6;
+        if(yy<horY)ctx.fillRect(Math.round(x),Math.round(yy),2,2);
+      }
+    }
+    ctx.restore();
+  }
+  // the land far below — the jungle and river we crossed
+  R(ctx,0,horY,BW,ridgeY-horY,hexLerp('#121026','#3a2440',e));
+  R(ctx,0,horY,BW,2,hexLerp('#2a2248','#ffb870',e));
+  for(let i=0;i<BW/6;i++){
+    const x=i*6+h2(111,i)*5,y=horY+4+h2(112,i)*(ridgeY-horY-10);
+    const sz=1+h2(113,i)*((y-horY)/(ridgeY-horY))*4;
+    pxCircle(ctx,x,y,sz,hexLerp('#0d1622','#22303a',e*0.6));
+  }
+  // the river ribbon, catching the light
+  ctx.fillStyle=hexLerp('#1d3a52','#e8b070',e*0.75);
+  let rx=sx;
+  for(let y=horY+3;y<ridgeY;y+=2){
+    const w=1+(y-horY)*0.13;
+    rx+=Math.sin(y*0.32)*1.6;
+    ctx.fillRect(Math.round(rx-w/2),y,Math.max(1,Math.round(w)),2);
+  }
+  if(e>0.5)shimmer(0,BW,horY+6,ridgeY-4,t,`rgba(255,220,150,${(0.25*(e-0.5)).toFixed(3)})`,true);
+  // summit ridge we stand on
+  for(let x=0;x<BW;x+=3){
+    const topR=ridgeY+Math.round(vnoise(x*0.05,4)*6-3);
+    R(ctx,x,topR,3,BH-topR,'#1d1730');
+    R(ctx,x,topR,3,2,hexLerp('#3a3050','#8a5e48',e));
+  }
+  for(let i=0;i<14;i++){const x=10+hash1(601+i)*(BW-20);R(ctx,x,ridgeY-2+vnoise(x,8)*4,1,3,hexLerp('#2c4434','#5e5438',e));}
+  // hero
+  drawChar(charX,ridgeY+2,e>0.3?'silh':anim,t);
+  // warm wash
+  if(e>0.05)R(ctx,0,0,BW,BH,`rgba(255,170,80,${(0.07*e).toFixed(3)})`);
+  ANCH.head={x:charX,y:ridgeY-20};
+}
+
+/* ============================= master render ============================= */
+let crocPhaseNow=-1;
+function renderScene(tl,seg,smooth,t,dt){
+  let fade=0,flash=0;
+  const local=clamp(smooth-seg.start,0,seg.px),p=seg.px?local/seg.px:0;
+  ANCH={};
+  R(ctx,0,0,BW,BH,'#000');
+  crocPhaseNow=-1;
+  switch(seg.sc){
+    case 'approach':{
+      const x=(seg.t==='st'||seg.t==='hero')?seg.x:lerp(seg.x0,seg.x1,easeIO(p));
+      const moving=seg.t==='tr'&&p>0.01&&p<0.99;
+      drawApproachScene(x,moving?'walk':'idle',0,t);
+      break;}
+    case 'gateopen':{
+      drawApproachScene(1042,'idle',sstep(p*1.25),t);
+      fade=sstep((p-0.72)/0.26);
+      break;}
+    case 'jent':{
+      drawJentScene(SCN.jent.cx,'idle',t,p);
+      if(seg.fadeIn)fade=1-sstep(p/0.4);
+      break;}
+    case 'p2go':{
+      const cx=SCN.jent.cx;
+      const x=lerp(cx,cx+122,easeIO(p));
+      ctx.drawImage(SCN.jent.c,0,0);
+      firefliesDraw(SCN.jent.ff,0,t);
+      drawChar(x,GY,p<0.97?'walk':'idle',t);
+      ANCH.head={x,y:GY-22};
+      showDom(SDOM.sgp1,cx-99,GY-18);showDom(SDOM.sgp2,cx+99,GY-18);
+      fade=sstep((p-0.62)/0.34);
+      break;}
+    case 'beach':{
+      let x=null,anim='walk',carryIdx=-1,inBoat=false,focus;
+      if(seg.t==='st'){x=seg.x;anim='crouch';focus=x;}
+      else if(seg.carry!==undefined){
+        const from=PART_XS[seg.carry];
+        if(p<0.5){x=lerp(from,BOAT_X,easeIO(p/0.5));anim='carry';carryIdx=seg.carry;focus=x;}
+        else if(seg.last){
+          if(p<0.72){x=BOAT_X;anim='crouch';focus=x;}
+          else{inBoat=true;focus=BOAT_X;}
+        }else{x=lerp(BOAT_X,PART_XS[seg.carry+1],easeIO((p-0.5)/0.5));anim='walk';focus=x;}
+      }else{x=lerp(seg.x0,seg.x1,easeIO(p));focus=x;if(seg.fadeIn)fade=1-sstep(p/0.4);}
+      drawBeachScene(focus,x,anim,carryIdx,boatStage(smooth),inBoat,t,smooth);
+      break;}
+    case 'cross':{
+      const bx=lerp(BOAT_X,1014,easeIO(p));
+      drawBeachScene(bx,null,'paddle',-1,5,true,t,smooth);
+      fade=sstep((p-0.8)/0.2);
+      break;}
+    case 'climb':{
+      let chY,anim='climb',opts={};
+      if(seg.t==='st'){
+        chY=seg.y;anim=seg.hang?'hang':'climb';
+        if(seg.id==='bbird')opts.birdP=stationPhase(seg,smooth).vis;
+        if(seg.id==='win'){opts.birdP=1;}
+      }else if(seg.base){
+        chY=0;opts.walkOff=Math.round(lerp(-72,0,easeIO(p)));anim=p<0.96?'walk':'idle';
+        if(seg.fadeIn)fade=1-sstep(p/0.4);
+      }else if(seg.leap){
+        if(p<0.5){chY=lerp(seg.y0,1400,easeIO(p/0.5));anim='climb';}
+        else if(p<0.62){chY=1400;anim='climb';opts.cf=0;}
+        else if(p<0.8){const lp=(p-0.62)/0.18;chY=lerp(1400,HANG_Y,lp);anim='fall';}
+        else{chY=HANG_Y;anim='hang';}
+      }else{
+        chY=lerp(seg.y0,seg.y1,easeIO(p));
+        if(seg.flavor==='slip'&&p>0.42&&p<0.62){
+          const dip=Math.sin((p-0.42)/0.2*Math.PI);
+          chY-=dip*10;anim=dip>0.35?'hang':'climb';opts.slipDust=dip>0.3;
+        }else if(seg.flavor==='dangle'&&p>0.38&&p<0.6){anim='hang';}
+      }
+      drawClimbScene(chY,anim,opts,t);
+      break;}
+    case 'summitup':{
+      if(p<0.45){
+        let chY,anim;
+        if(p<0.2){chY=HANG_Y;anim='hang';}
+        else{chY=lerp(HANG_Y,WALL_TOP+4,easeIO((p-0.2)/0.25));anim='crouch';}
+        drawClimbScene(chY,anim,{birdP:p<0.15?1:clamp(1-(p-0.15)/0.1,0,1)},t);
+      }else{
+        const wp=(p-0.45)/0.55;
+        drawSummitScene(Math.round(lerp(BW*0.2,BW*0.62,easeIO(wp))),wp<0.96?'walk':'idle',0.02,t);
+      }
+      flash=Math.max(0,1-Math.abs((p-0.45)/0.1))*0.85;
+      break;}
+    case 'fin':{
+      drawSummitScene(Math.round(BW*0.62),'idle',p,t);
+      break;}
+    case 'fw':{
+      let x=FORK_X,anim='idle',flip=false,crocPhase=-1,focus=FORK_X;
+      if(mode==='fork'){
+        if(seg.t==='tr'){x=lerp(seg.x0,seg.x1,easeIO(p));anim=p<0.92?'walk':'idle';if(seg.fadeIn)fade=1-sstep(p/0.38);}
+      }else if(mode==='croc'){
+        if(seg.croc){
+          if(p<0.55){x=lerp(FORK_X,242,easeIO(p/0.55));anim='walk';flip=true;focus=x;}
+          else if(p<0.7){x=242-((p-0.55)/0.15)*14;anim='stumble';flip=true;focus=232;}
+          else{crocPhase=(p-0.7)/0.3;x=null;focus=210;}
+        }else{crocPhase=1;x=null;focus=210;}
+      }else if(mode==='oasis'){
+        if(seg.oasis){
+          if(p<0.68){x=lerp(FORK_X,OASIS_X-28,easeIO(p/0.68));anim='walk';focus=x;}
+          else{x=OASIS_X-28;anim=p>0.82?'sit':'idle';focus=lerp(OASIS_X-28,OASIS_X+72,sstep((p-0.68)/0.32));}
+        }else{x=OASIS_X-28;anim='sit';focus=OASIS_X+72;}
+      }
+      if(x!==null)focus=Math.max(focus,1);
+      drawFWScene(focus,x,anim,flip,crocPhase,mode==='oasis',t);
+      crocPhaseNow=crocPhase;
+      break;}
+  }
+  drawParts(dt);
+  return{fade,flash};
+}
+
+/* ============================= tracker ============================= */
+const ICONS={
+  gate:'<rect x="1" y="3" width="2" height="8"/><rect x="8" y="3" width="2" height="8"/><rect x="2" y="1" width="7" height="2"/><rect x="4" y="5" width="3" height="6" opacity=".55"/>',
+  tree:'<rect x="5" y="7" width="2" height="4"/><rect x="3" y="2" width="6" height="5"/><rect x="2" y="4" width="8" height="2"/><rect x="4" y="1" width="4" height="2"/>',
+  wave:'<rect x="1" y="6" width="3" height="2"/><rect x="3" y="4" width="2" height="2"/><rect x="5" y="6" width="3" height="2"/><rect x="7" y="4" width="2" height="2"/><rect x="9" y="6" width="2" height="2"/>',
+  mount:'<rect x="5" y="1" width="2" height="2"/><rect x="4" y="3" width="4" height="2"/><rect x="3" y="5" width="6" height="2"/><rect x="2" y="7" width="8" height="2"/><rect x="1" y="9" width="10" height="2"/>',
+  sun:'<rect x="4" y="4" width="4" height="4"/><rect x="5" y="1" width="2" height="2"/><rect x="5" y="9" width="2" height="2"/><rect x="1" y="5" width="2" height="2"/><rect x="9" y="5" width="2" height="2"/>',
+};
+const trackerIcons=[];
+function buildTracker(){
+  const tr=document.getElementById('tracker');
+  const names=['gate','tree','wave','mount','sun'];
+  names.forEach((n,i)=>{
+    const d=document.createElement('div');d.className='ticon';
+    d.style.top=`calc(${(i+0.5)*20}% )`;
+    d.innerHTML=`<svg width="22" height="22" viewBox="0 0 12 12" shape-rendering="crispEdges" fill="${i===4?'#ffd24a':'#efe9d6'}">${ICONS[n]}</svg>`;
+    tr.appendChild(d);trackerIcons.push(d);
+  });
+}
+const trMark=document.getElementById('tr-mark'),trLabel=document.getElementById('tr-label');
+let zoneBounds=[];
+function computeZones(){
+  const tl=TLS.main;
+  const f=(pred)=>{const s=tl.segs.find(pred);return s?s.end:tl.totalPx;};
+  zoneBounds=[
+    f(s=>s.sc==='gateopen'),
+    f(s=>s.sc==='p2go'),
+    f(s=>s.sc==='cross'),
+    f(s=>s.t==='st'&&s.id==='win'),
+    tl.totalPx,
+  ];
+}
+function updateTracker(smooth,seg){
+  let zi=0,within=0;
+  if(mode!=='main'){zi=1;within=0.5;}
+  else{
+    let prev=0;
+    for(let i=0;i<5;i++){
+      if(smooth<zoneBounds[i]){zi=i;within=(smooth-prev)/(zoneBounds[i]-prev);break;}
+      prev=zoneBounds[i];zi=4;within=1;
+    }
+  }
+  const fr=clamp((zi+within)*0.2,0,1);
+  trMark.style.top=`calc(6px + ${fr.toFixed(4)} * (100% - 12px))`;
+  trackerIcons.forEach((d,i)=>{
+    d.classList.toggle('on',i===zi);
+    d.classList.toggle('done',i<zi);
+  });
+  let lbl;
+  if(mode==='fork')lbl='PATH 1 · THE FORK';
+  else if(mode==='croc')lbl='PATH 1 · CROC PIT';
+  else if(mode==='oasis')lbl='PATH 1 · OASIS';
+  else if(seg.t==='st')lbl=STN[seg.id].label;
+  else lbl=['THE GATE','THE JUNGLE','THE RIVER','THE CLIMB','THE SUMMIT'][zi];
+  if(trLabel._v!==lbl){trLabel._v=lbl;trLabel.textContent=lbl;}
+}
+
+/* ============================= main loop ============================= */
+const veil=document.getElementById('veil'),fader=document.getElementById('fader');
+const heroEl=document.getElementById('hero'),finalCard=document.getElementById('final-card');
+const goEl=SDOM.go;
+let lastVeilVis=false,lastT=performance.now(),booted=false;
+function frame(now){requestAnimationFrame(frame);if(booted)step(now);}
+function step(now){
+  const dt=clamp((now-lastT)/1000,0.001,0.05);lastT=now;
+  const t=now/1000;
+  const tl=TLS[mode];
+
+  // transition FSM
+  let clickFade=0;
+  if(trans){
+    trans.k+=dt/0.27;
+    if(trans.phase==='out'){
+      if(trans.k>=1){trans.after();trans={phase:'in',k:0};clickFade=1;}
+      else clickFade=sstep(trans.k);
+    }
+    if(trans&&trans.phase==='in'){
+      if(trans.k>=1)trans=null,clickFade=0;
+      else clickFade=1-sstep(trans.k);
+    }
+  }
+
+  applyGates(tl);
+  const k=1-Math.exp(-7*dt);
+  let stp=(tl.target-tl.smooth)*k;
+  const maxStep=3000*dt;
+  if(stp>maxStep)stp=maxStep;else if(stp<-maxStep)stp=-maxStep;
+  tl.smooth+=stp;
+  if(Math.abs(tl.target-tl.smooth)<0.3)tl.smooth=tl.target;
+  const seg=segAt(tl,tl.smooth);
+
+  // render scene
+  const fx=renderScene(tl,seg,tl.smooth,t,dt);
+
+  // stations of the active timeline
+  let veilV=0,bubV=0;
+  for(const s2 of tl.stationSegs){
+    const st=STN[s2.id];
+    const near=tl.smooth>=s2.start-60&&tl.smooth<=s2.end+60;
+    const ph=near?stationPhase(s2,tl.smooth):{vis:0,contentY:tl.smooth>s2.end?(s2.ovf||0):0,nudge:0,hint:false};
+    if(st.isBub){applyBubble(s2.id,ph);if(near)bubV=Math.max(bubV,ph.vis);}
+    else{applyStation(s2.id,ph);if(near&&ph.vis>0)veilV=Math.max(veilV,ph.vis);}
+  }
+  const vOn=veilV>0.01;
+  if(vOn!==lastVeilVis){veil.style.visibility=vOn?'visible':'hidden';lastVeilVis=vOn;}
+  if(vOn)veil.style.opacity=(veilV*0.92).toFixed(3);
+
+  // visited flags
+  if(mode==='croc'){
+    const s=TLS.croc.stationSegs[0];
+    if(TLS.croc.smooth>s.start+ENTER+s.ovf+RELEASE*0.4)STATE.crocVisited=true;
+  }
+  if(mode==='oasis'){
+    const s=TLS.oasis.stationSegs[0];
+    if(TLS.oasis.smooth>s.start+ENTER+s.ovf+RELEASE*0.4)STATE.oasisVisited=true;
+  }
+
+  // game over text
+  if(crocPhaseNow>0.5){
+    const op=sstep((crocPhaseNow-0.5)/0.3)*(1-veilV*0.85);
+    domShown.add(goEl);
+    goEl.style.visibility='visible';goEl.style.opacity=op.toFixed(3);
+    goEl.style.transform=`translate(-50%,-50%) translateY(${Math.sin(t*13)*1.2}px)`;
+  }
+
+  // fader / flash
+  const fOp=Math.max(fx.fade,clickFade);
+  fader.style.opacity=fOp.toFixed(3);
+  if(fx.flash>0.01){fader.style.background=`rgb(255,244,214)`;fader.style.opacity=Math.max(fOp,fx.flash).toFixed(3);}
+  else fader.style.background='#000';
+
+  // hero title
+  {
+    const hSeg=TLS.main.segs[0];
+    const hp=mode==='main'?clamp(tl.smooth/(hSeg.px*0.85),0,1):1;
+    heroEl.style.opacity=(1-hp).toFixed(3);
+    heroEl.style.visibility=hp>=1?'hidden':'visible';
+    heroEl.style.transform=`translateY(${(-hp*60).toFixed(1)}px)`;
+  }
+  // final card
+  {
+    let fc=0;
+    if(mode==='main'&&seg.t==='fin'){
+      const p=(tl.smooth-seg.start)/seg.px;
+      fc=clamp((p-0.7)/0.22,0,1);
+    }
+    finalCard.style.opacity=fc.toFixed(3);
+    finalCard.style.visibility=fc>0.01?'visible':'hidden';
+    finalCard.querySelector('.fc-inner').style.transform=`translateY(${((1-fc)*36).toFixed(1)}px) scale(${(0.96+0.04*fc).toFixed(4)})`;
+  }
+
+  // nav buttons
+  let nav=[];
+  if(!trans){
+    if(mode==='main'){
+      const h=TLS.main.hubSeg;
+      const inHub=tl.smooth>h.start+10&&tl.smooth<h.end+30&&veilV<0.05&&bubV<0.05&&fOp<0.4;
+      if(inHub){
+        const unl=unlocked();
+        const anim=unl&&!STATE.unlockAnimDone;
+        if(anim&&!STATE._animSched){STATE._animSched=true;setTimeout(()=>{STATE.unlockAnimDone=true;navSig='';},900);}
+        nav=[
+          {id:'path1',label:'PATH 1',tick:STATE.crocVisited&&STATE.oasisVisited},
+          {id:'path2',label:'PATH 2',lock:!unl&&!anim,anim},
+        ];
+      }
+    }else{
+      const endStart=tl.stationSegs[0].end-EXIT*0.5;
+      if(tl.smooth>endStart&&fOp<0.4){
+        if(mode==='fork')nav=[
+          {id:'exact',label:'EXACT AMOUNT',tick:STATE.crocVisited},
+          {id:'buffer',label:'BUFFER',tick:STATE.oasisVisited},
+          {id:'backent',label:'BACK TO JUNGLE ENTRANCE'},
+        ];
+        else if(mode==='croc')nav=[{id:'backfork',label:'BACK TO FORK'}];
+        else nav=[{id:'backfork',label:'BACK TO FORK'},{id:'backent',label:'BACK TO JUNGLE ENTRANCE'}];
+      }
+    }
+  }
+  setNav(nav);
+
+  updateTracker(tl.smooth,seg);
+  flushDom();
+
+  window.__state={mode,s:Math.round(tl.smooth),target:Math.round(tl.target),
+    seg:seg.t+(seg.id?':'+seg.id:'')+(seg.sc?'/'+seg.sc:''),total:tl.totalPx,
+    veil:+veilV.toFixed(2),fade:+fOp.toFixed(2),
+    flags:{p1:STATE.path1Visited,croc:STATE.crocVisited,oasis:STATE.oasisVisited,p2:STATE.path2Entered}};
+}
+
+/* ============================= hooks & boot ============================= */
+window.__jump=v=>{const tl=TLS[mode];tl.target=clamp(v,0,tl.totalPx-2);tl.smooth=tl.target;};
+window.__setTarget=v=>{const tl=TLS[mode];tl.target=clamp(v,0,tl.totalPx-2);};
+window.__nudge=d=>{const tl=TLS[mode];tl.target=clamp(tl.target+d,0,tl.totalPx-2);};
+window.__step=ms=>step(ms!==undefined?ms:performance.now());
+window.__segs=()=>TLS[mode].segs.map(s=>({t:s.t,id:s.id||null,sc:s.sc||null,start:s.start,end:s.end,ovf:s.ovf??null}));
+window.__click=id=>ACTIONS[id]&&ACTIONS[id]();
+window.__tl=()=>({mode,target:TLS[mode].target,smooth:TLS[mode].smooth,total:TLS[mode].totalPx});
+
+function onResize(){
+  const fr={};
+  for(const m in TLS){const tl=TLS[m];fr[m]=[tl.smooth/tl.totalPx,tl.target/tl.totalPx];}
+  setupBuffer();buildScenes();
+  for(const m in TLS){const tl=TLS[m];buildSegments(tl);tl.smooth=fr[m][0]*tl.totalPx;tl.target=fr[m][1]*tl.totalPx;}
+  computeZones();
+}
+window.addEventListener('resize',onResize);
+
+Promise.race([document.fonts.ready,new Promise(r=>setTimeout(r,2500))]).then(()=>{
+  buildSprites();
+  setupBuffer();
+  buildScenes();
+  for(const m in TLS)buildSegments(TLS[m]);
+  computeZones();
+  buildTracker();
+  setTimeout(()=>{for(const m in TLS)buildSegments(TLS[m]);computeZones();},600);
+  document.getElementById('loader').classList.add('gone');
+  booted=true;
+  requestAnimationFrame(frame);
+});
+</script>
+</body></html>

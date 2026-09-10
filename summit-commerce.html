@@ -1,0 +1,1510 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Scenario 1: Summit Commerce</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+<script type="importmap">{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.161.0/build/three.module.js"}}</script>
+<style>
+:root{
+  --bg:#05070f;
+  --accent:#5ee6ff;
+  --accent-dim:rgba(94,230,255,0.55);
+  --ink:#f2f5fb;
+  --body-c:#c3cbdc;
+  --muted:#7e8aa3;
+  --hair:rgba(255,255,255,0.10);
+  --card-bg:rgba(9,11,19,0.86);
+}
+*{box-sizing:border-box}
+html,body{margin:0;padding:0;height:100%;overflow:hidden;background:var(--bg);overscroll-behavior:none}
+body{font-family:'Inter',system-ui,sans-serif;color:var(--body-c);-webkit-font-smoothing:antialiased}
+canvas#scene{position:fixed;inset:0;z-index:0;display:block}
+
+/* ---------- loader ---------- */
+#loader{position:fixed;inset:0;z-index:99;background:var(--bg);display:flex;align-items:center;justify-content:center;flex-direction:column;gap:22px;transition:opacity .7s ease;color:var(--ink)}
+#loader.gone{opacity:0;pointer-events:none}
+#loader .ltxt{font-weight:600;letter-spacing:.42em;font-size:12px;color:var(--muted)}
+#loader .lbar{width:120px;height:1px;background:rgba(255,255,255,.12);position:relative;overflow:hidden}
+#loader .lbar::after{content:"";position:absolute;left:-40%;top:0;width:40%;height:100%;background:var(--accent);animation:scan 1.2s linear infinite}
+@keyframes scan{to{left:100%}}
+
+#fatal{position:fixed;inset:0;z-index:100;background:#05070f;color:#fff;display:none;align-items:center;justify-content:center;padding:40px;font-size:14px;white-space:pre-wrap}
+
+/* ---------- veil ---------- */
+#veil{position:fixed;inset:0;z-index:5;background:rgba(4,7,15,0.46);opacity:0;visibility:hidden;pointer-events:none}
+
+/* ---------- hero title ---------- */
+#hero{position:fixed;inset:0;z-index:15;display:flex;flex-direction:column;align-items:center;justify-content:flex-start;padding-top:11vh;pointer-events:none;text-align:center}
+.hero-eyebrow{font-weight:600;font-size:11px;letter-spacing:.5em;color:var(--muted);margin-bottom:26px}
+.hero-title{margin:0;line-height:1.02;display:flex;flex-direction:column;align-items:center}
+.ht-small{font-weight:500;font-size:clamp(15px,1.5vw,21px);color:var(--accent);letter-spacing:.58em;margin-bottom:18px}
+.ht-big{font-weight:700;font-size:clamp(58px,7.6vw,116px);letter-spacing:-0.015em;color:var(--ink);text-shadow:0 0 80px rgba(94,230,255,.18)}
+.hero-rule{width:64px;height:1px;background:var(--accent);margin:30px 0 22px;opacity:.8}
+.hero-sub{font-size:clamp(13px,1.1vw,16px);font-weight:400;color:var(--muted);letter-spacing:.06em;max-width:560px;line-height:1.7}
+.hero-hint{margin-top:7vh;display:flex;flex-direction:column;align-items:center;gap:10px;color:var(--muted);font-weight:600;font-size:10.5px;letter-spacing:.44em}
+.hero-hint svg{animation:bob 1.8s ease-in-out infinite}
+@keyframes bob{0%,100%{transform:translateY(0);opacity:.9}50%{transform:translateY(8px);opacity:.35}}
+
+/* ---------- popups ---------- */
+.popup{position:fixed;inset:0;z-index:10;display:flex;align-items:center;justify-content:center;opacity:0;visibility:hidden;pointer-events:none}
+.card{position:relative;width:min(800px,72vw);max-height:78vh;display:flex;flex-direction:column;background:var(--card-bg);backdrop-filter:blur(18px) saturate(.92);border:1px solid var(--hair);border-radius:12px;box-shadow:0 40px 110px -20px rgba(0,0,0,.85),0 0 0 1px rgba(0,0,0,.4);will-change:transform;overflow:hidden}
+.card::before{content:"";position:absolute;top:0;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent,var(--accent-dim),transparent);opacity:.7}
+.card-head{padding:34px 52px 14px;flex:none}
+.eyebrow{display:flex;align-items:center;gap:12px;font-weight:600;font-size:10px;letter-spacing:.34em;text-transform:uppercase;color:var(--muted)}
+.eyebrow::before{content:"";width:18px;height:1px;background:var(--accent);flex:none}
+.card-title{font-weight:600;font-size:clamp(22px,2vw,30px);color:var(--ink);margin:14px 0 0;line-height:1.22;letter-spacing:-0.015em}
+.card-title.qd::before{content:"\201C";color:var(--accent)}
+.card-title.qd::after{content:"\201D";color:var(--accent)}
+.card-scroller{flex:1 1 auto;min-height:0;overflow:hidden;position:relative}
+.card-content{padding:12px 52px 48px;will-change:transform;font-size:15px;line-height:1.72;font-weight:400}
+.card-content p{margin:0 0 14px}
+.more-cue{position:absolute;left:0;right:0;bottom:0;height:84px;pointer-events:none;background:linear-gradient(180deg,rgba(9,11,19,0),rgba(9,11,19,.97) 80%);display:flex;align-items:flex-end;justify-content:center;padding-bottom:12px;opacity:0;transition:opacity .25s ease}
+.more-cue .mc{display:flex;align-items:center;gap:9px;font-weight:600;font-size:9.5px;letter-spacing:.34em;color:var(--accent);text-transform:uppercase}
+.more-cue svg{animation:bob 1.6s ease-in-out infinite}
+
+/* content elements */
+.lede{font-size:16px;color:var(--ink);font-weight:400;line-height:1.75}
+.lead-q{font-weight:600;font-size:17.5px;line-height:1.45;color:var(--ink);letter-spacing:-0.01em;margin:26px 0 12px}
+.lead-q:first-child{margin-top:4px}
+ul.snow-list{list-style:none;margin:0 0 14px;padding:0}
+ul.snow-list>li{position:relative;padding-left:24px;margin:0 0 11px}
+ul.snow-list>li::before{content:"";position:absolute;left:0;top:.74em;width:10px;height:1.5px;background:var(--accent)}
+.branch{border-left:2px solid var(--accent);background:rgba(255,255,255,0.028);padding:14px 20px 13px;margin:14px 0 16px}
+.branch.ice{border-left-color:rgba(255,255,255,0.32)}
+.branch-label{font-weight:600;font-size:11px;letter-spacing:.22em;text-transform:uppercase;color:var(--accent);margin-bottom:7px}
+.branch.ice .branch-label{color:var(--muted)}
+.branch p{margin:0;color:var(--body-c)}
+.branch ul.snow-list{margin:6px 0 2px}
+.branch ul.snow-list>li:last-child{margin-bottom:0}
+.subnote{border-left:1.5px solid rgba(255,255,255,0.22);padding:7px 16px;margin:9px 0 4px;font-size:13.5px;color:var(--muted)}
+ul.chips{list-style:none;display:flex;flex-wrap:wrap;gap:8px;margin:6px 0 18px;padding:0}
+ul.chips li{border:1px solid rgba(255,255,255,0.14);color:var(--body-c);border-radius:4px;padding:5px 13px;font-size:13px;font-weight:450}
+
+/* email card */
+.email-meta{display:flex;align-items:center;gap:14px;border:1px solid var(--hair);border-radius:8px;padding:13px 17px;margin:4px 0 20px;background:rgba(255,255,255,0.02)}
+.email-meta .av{width:38px;height:38px;border-radius:6px;border:1px solid var(--accent-dim);color:var(--accent);font-weight:600;font-size:16px;display:flex;align-items:center;justify-content:center;flex:none}
+.email-meta .who{font-weight:600;color:var(--ink);font-size:14px;letter-spacing:.01em}
+.email-meta .to{font-size:12px;color:var(--muted);margin-top:2px}
+.approval-box{border:1px solid var(--hair);border-radius:8px;overflow:hidden;margin:6px 0 20px}
+.ap-row{padding:12px 18px;font-size:14.5px;border-bottom:1px solid rgba(255,255,255,0.06);color:var(--body-c)}
+.ap-row strong{font-weight:600;color:var(--ink)}
+.ap-row.promo{border-left:2px solid var(--accent);background:rgba(94,230,255,0.045)}
+.ap-row.fac{border-bottom:none;color:var(--muted);font-size:12.5px;letter-spacing:.02em}
+.sig{color:var(--ink)}
+
+/* first-draw card */
+.fd-label{font-weight:600;font-size:12px;letter-spacing:.26em;text-transform:uppercase;color:var(--ink);margin:28px 0 10px;padding-bottom:8px;border-bottom:1px solid rgba(255,255,255,0.08);display:flex;align-items:center;gap:11px}
+.fd-label::before{content:"";width:14px;height:1.5px;background:var(--accent);flex:none}
+.arrow-row{position:relative;padding:3px 0 3px 30px;margin:0 0 8px}
+.arrow-row .ar{position:absolute;left:2px;color:var(--accent);font-weight:500}
+.close-quote{border:1px solid rgba(255,255,255,0.12);background:rgba(255,255,255,0.025);border-radius:8px;padding:22px 28px;margin:12px 0 6px;font-size:14.5px}
+.close-quote .cq-label{font-weight:600;font-size:11px;letter-spacing:.24em;text-transform:uppercase;color:var(--accent);margin:16px 0 7px}
+.close-quote p{margin:0 0 13px}
+.close-quote p:last-child{margin-bottom:0}
+
+/* thesis card */
+.card.thesis-card{box-shadow:0 0 90px rgba(94,230,255,.14),0 40px 110px -20px rgba(0,0,0,.9);border-color:rgba(94,230,255,.28)}
+.card.thesis-card::before{opacity:1;height:2px}
+.thesis-card .card-title{font-size:clamp(25px,2.3vw,34px)}
+.thesis{font-size:15.5px;line-height:1.8}
+.thesis strong{color:var(--ink);font-weight:600}
+
+/* ---------- speech bubble ---------- */
+#bubble{position:fixed;left:0;top:0;z-index:7;pointer-events:none;opacity:0;visibility:hidden;will-change:transform}
+.bubble-card{position:relative;background:rgba(8,10,18,0.94);border:1px solid rgba(255,255,255,0.22);border-radius:10px;padding:16px 22px;max-width:330px;font-weight:500;font-size:15px;line-height:1.5;color:var(--ink);box-shadow:0 18px 50px rgba(0,0,0,.6);letter-spacing:-0.005em}
+.bubble-card::after{content:"";position:absolute;left:50%;bottom:-8.5px;width:15px;height:15px;background:rgba(8,10,18,0.94);border-right:1px solid rgba(255,255,255,0.22);border-bottom:1px solid rgba(255,255,255,0.22);transform:translateX(-50%) rotate(45deg)}
+
+/* ---------- progress tracker ---------- */
+#tracker{position:fixed;right:26px;top:50%;transform:translateY(-50%);height:62vh;width:30px;z-index:6;pointer-events:none}
+#tracker .rail{position:absolute;left:50%;top:14px;bottom:14px;width:1px;transform:translateX(-50%);background:rgba(255,255,255,0.16)}
+#tracker .peak-ic,#tracker .camp-ic{position:absolute;left:50%;transform:translateX(-50%)}
+#tracker .peak-ic{top:-12px}
+#tracker .camp-ic{bottom:-14px}
+.tr-dot{position:absolute;left:50%;width:5px;height:5px;border-radius:50%;background:rgba(255,255,255,0.28);transform:translate(-50%,-50%);transition:background .3s,box-shadow .3s,width .3s,height .3s}
+.tr-dot.done{background:rgba(255,255,255,0.85)}
+.tr-dot.on{background:var(--accent);width:8px;height:8px;box-shadow:0 0 12px var(--accent-dim)}
+.tr-dot .lbl{position:absolute;right:22px;top:50%;transform:translateY(-50%);white-space:nowrap;background:rgba(8,10,18,0.92);border:1px solid var(--hair);color:var(--ink);font-weight:600;font-size:9.5px;letter-spacing:.22em;text-transform:uppercase;padding:5px 12px;border-radius:4px;opacity:0;transition:opacity .3s}
+.tr-dot.on .lbl{opacity:1}
+#tr-skier{position:absolute;left:50%;width:11px;height:11px;border-radius:50%;transform:translate(-50%,-50%);background:var(--accent);box-shadow:0 0 14px var(--accent);z-index:2}
+
+/* ---------- final card ---------- */
+#final-card{position:fixed;inset:0;z-index:12;display:flex;align-items:center;justify-content:center;pointer-events:none;opacity:0;visibility:hidden}
+.fc-inner{text-align:center;background:rgba(8,10,18,0.88);backdrop-filter:blur(16px);border:1px solid var(--hair);border-radius:14px;padding:58px 86px;box-shadow:0 50px 120px -20px rgba(0,0,0,.9);will-change:transform;position:relative;overflow:hidden}
+.fc-inner::before{content:"";position:absolute;top:0;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent,var(--accent),transparent)}
+.fc-eyebrow{font-weight:600;font-size:10px;letter-spacing:.46em;color:var(--accent);margin-bottom:20px;text-transform:uppercase}
+.fc-title{font-weight:700;font-size:clamp(28px,2.8vw,42px);color:var(--ink);letter-spacing:-0.015em}
+.fc-sub{margin-top:14px;font-size:14.5px;color:var(--muted);font-weight:400;letter-spacing:.03em}
+.fc-foot{margin-top:30px;font-weight:600;font-size:10px;letter-spacing:.4em;text-transform:uppercase;color:var(--muted)}
+</style>
+</head>
+<body>
+
+<div id="loader"><div class="ltxt">SCENARIO 1 · SUMMIT COMMERCE</div><div class="lbar"></div></div>
+<div id="fatal"></div>
+<canvas id="scene"></canvas>
+<div id="veil"></div>
+
+<!-- ============ HERO TITLE ============ -->
+<div id="hero">
+  <div class="hero-eyebrow">SLOPE · SDR CASE STUDY</div>
+  <h1 class="hero-title">
+    <span class="ht-small">SCENARIO 1</span>
+    <span class="ht-big">SUMMIT COMMERCE</span>
+  </h1>
+  <div class="hero-rule"></div>
+  <div class="hero-sub">A descent through the deal — from approval email to first draw.<br>Prepared by Arman</div>
+  <div class="hero-hint"><span>SCROLL TO BEGIN</span><svg width="18" height="11" viewBox="0 0 22 14" fill="none"><path d="M2 2l9 9 9-9" stroke="#5ee6ff" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+</div>
+
+<!-- ============ POPUPS ============ -->
+
+<!-- Station 1: Approval Email -->
+<div class="popup" id="pp-email">
+  <div class="card">
+    <div class="card-head">
+      <div class="eyebrow"><span>The Summit · Station 1</span></div>
+      <h2 class="card-title">Exercise 1A: Approval Email</h2>
+    </div>
+    <div class="card-scroller"><div class="card-content">
+      <div class="email-meta"><div class="av">A</div><div><div class="who">Arman · Slope</div><div class="to">to Summit Commerce</div></div></div>
+      <p>Hi {Name},</p>
+      <p>Congratulations, Summit Commerce has been approved for a $250,000 revolving line of credit with Slope.</p>
+      <p>Here are the details of your approval:</p>
+      <div class="approval-box">
+        <div class="ap-row"><strong>Approved Line:</strong> $250,000</div>
+        <div class="ap-row"><strong>APR Range:</strong> 14% to 18%</div>
+        <div class="ap-row promo"><strong>Promotion:</strong> 20% off interest on your first draw</div>
+        <div class="ap-row fac">Supported by a J.P. Morgan credit facility, with loans originated by Lead Bank, Member FDIC</div>
+      </div>
+      <p>My name is Arman, and I will be your point of contact at Slope moving forward. I can help with any questions around your line, available terms, repayment schedule, first draw, or how to think through using Slope alongside your current financing options.</p>
+      <p>I would like to set up 15 minutes this week to introduce myself, walk you through how the line works, and make sure everything is ready when the timing makes sense for your business.</p>
+      <p>Are you available sometime Monday or Tuesday next week?</p>
+      <p class="sig">Best,<br>{Signature}</p>
+    </div></div>
+    <div class="more-cue"><div class="mc"><span>scroll</span><svg width="13" height="8" viewBox="0 0 22 14" fill="none"><path d="M2 2l9 9 9-9" stroke="#5ee6ff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg></div></div>
+  </div>
+</div>
+
+<!-- Station 2: Mental Model -->
+<div class="popup" id="pp-mental">
+  <div class="card">
+    <div class="card-head">
+      <div class="eyebrow"><span>Station 2 · Exercise 1B</span></div>
+      <h2 class="card-title">Mental Model</h2>
+    </div>
+    <div class="card-scroller"><div class="card-content">
+      <p class="lede">My mental model is that Summit Commerce is already a qualified, approved borrower, but they may still need help understanding Slope’s terms, how the line works, and how it compares to what they have used before. I would start by clearing up any confusion around the approval, APR, draw process, or repayment structure, then focus on their experience with Amazon Lending to understand where there may be pain around access, flexibility, repayment, or use of funds. From there, I would dig into what they originally wanted the $300K for, whether that need is still active, and whether drawing now makes sense based on a real business use case like inventory, supplier payments, PPC, product launches, buying deeper, or bridging Amazon payout timing.</p>
+    </div></div>
+    <div class="more-cue"><div class="mc"><span>scroll</span><svg width="13" height="8" viewBox="0 0 22 14" fill="none"><path d="M2 2l9 9 9-9" stroke="#5ee6ff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg></div></div>
+  </div>
+</div>
+
+<!-- Jump 1 -->
+<div class="popup" id="pp-j1">
+  <div class="card">
+    <div class="card-head">
+      <div class="eyebrow"><span>What questions would you ask? · Jump 1 of 3</span></div>
+    </div>
+    <div class="card-scroller"><div class="card-content">
+      <h3 class="lead-q">Is there anything top of mind or any questions or concerns you have about your approval? Have you gotten a chance to look at it yet?</h3>
+      <div class="branch"><div class="branch-label">If they forgot about it:</div>
+        <p>No problem, that happens. The line is already approved, so I would just want to quickly walk you through how it works and see if there is a real use case where it makes sense.</p>
+      </div>
+      <div class="branch"><div class="branch-label">If they are confused by APR or fees:</div>
+        <p>Totally fair. APR and total financing cost can be easy to mix up. I can walk you through the actual dollar cost of a sample draw so it is clear.</p>
+      </div>
+      <div class="branch"><div class="branch-label">If they say no / nothing top of mind:</div>
+        <p>"Okay awesome. Well, if you don't mind, I'd love to just learn a little more about you guys and the business. How did you get started doing this?"</p>
+      </div>
+      <div class="branch ice"><div class="branch-label">Potential follow-ups:</div>
+        <ul class="snow-list">
+          <li>Take something from their story and tie it to growth question: "Oh wow thats awesome, was there any ever growing pains as you guys were doing (xyz)"</li>
+          <li>"Have you guys used lending or financing at any point to support that growth?"</li>
+        </ul>
+      </div>
+    </div></div>
+    <div class="more-cue"><div class="mc"><span>scroll</span><svg width="13" height="8" viewBox="0 0 22 14" fill="none"><path d="M2 2l9 9 9-9" stroke="#5ee6ff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg></div></div>
+  </div>
+</div>
+
+<!-- Jump 2 -->
+<div class="popup" id="pp-j2">
+  <div class="card">
+    <div class="card-head">
+      <div class="eyebrow"><span>What questions would you ask? · Jump 2 of 3</span></div>
+    </div>
+    <div class="card-scroller"><div class="card-content">
+      <h3 class="lead-q">How has your experience been with Amazon Lending?</h3>
+      <ul class="snow-list">
+        <li>Are you carrying any other financing right now?
+          <div class="subnote">Save this info for later, because Slope may be useful as a way to pay off higher-cost debt.</div>
+        </li>
+        <li>With Amazon Lending, has there ever been a time when you needed capital and were not able to get it?</li>
+        <li>When you are repaying, how does that work for you? Do you control the timing, or does it come out automatically?
+          <div class="subnote">During a slower week, does that ever create a cash flow pinch?</div>
+        </li>
+        <li>When you used Amazon Lending, were you able to use the money however you wanted, or was it more locked into Amazon-related expenses?</li>
+      </ul>
+    </div></div>
+    <div class="more-cue"><div class="mc"><span>scroll</span><svg width="13" height="8" viewBox="0 0 22 14" fill="none"><path d="M2 2l9 9 9-9" stroke="#5ee6ff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg></div></div>
+  </div>
+</div>
+
+<!-- Jump 3 -->
+<div class="popup" id="pp-j3">
+  <div class="card">
+    <div class="card-head">
+      <div class="eyebrow"><span>What questions would you ask? · Jump 3 of 3</span></div>
+    </div>
+    <div class="card-scroller"><div class="card-content">
+      <h3 class="lead-q">What have you typically used financing for?</h3>
+      <ul class="chips"><li>Inventory?</li><li>Supplier payments?</li><li>PPC?</li><li>Product launches?</li><li>Covering timing gaps?</li><li>Paying off another financing product?</li></ul>
+
+      <h3 class="lead-q">What prompted the original $300K request?</h3>
+      <ul class="snow-list">
+        <li>Was that tied to inventory, supplier payments, PPC, a product launch, paying off another financing product, or something else?</li>
+        <li>Is that need still active, or has the timing changed since you applied?</li>
+        <li>When would you ideally want that capital available?</li>
+      </ul>
+
+      <h3 class="lead-q">How often do you restock your main SKUs? 30 days? 60? 90?</h3>
+      <ul class="snow-list">
+        <li>Is that cadence the best operational decision, or is that mostly what cash flow allows?</li>
+        <li>What determines that number: demand, supplier terms, warehouse capacity, or available cash?</li>
+        <li>Do your suppliers offer better pricing if you place larger orders?</li>
+        <li>Do they offer early-payment discounts or better terms if you pay upfront?</li>
+        <li>Are there proven SKUs where you would buy deeper if the capital was available?</li>
+      </ul>
+      <div class="branch"><div class="branch-label">If cash flow is limiting their order size:</div>
+        <ul class="snow-list">
+          <li>This is where I would connect to the "buy deep" strategy.</li>
+          <li>Neato used Slope to buy deeper, pay suppliers earlier, and improve margin after financing costs.</li>
+        </ul>
+      </div>
+
+      <h3 class="lead-q">What does your cash conversion cycle look like from supplier payment to Amazon payout?</h3>
+      <ul class="snow-list">
+        <li>Are you usually paying suppliers before cash comes back from Amazon?</li>
+        <li>Has DD+7 or Amazon reserves changed your cash timing at all?</li>
+        <li>If cash is tied up in the cycle, I would position Slope as a way to separate supplier payment timing from Amazon payout timing.</li>
+      </ul>
+
+      <h3 class="lead-q">When is your next real capital event?</h3>
+      <ul class="chips"><li>Next supplier payment?</li><li>Next inventory order?</li><li>Next product launch or PPC push?</li><li>Next debt payment?</li></ul>
+      <div class="branch"><div class="branch-label">If the timing is soon:</div>
+        <ul class="snow-list">
+          <li>I would walk them through what a first draw would look like.</li>
+          <li>Compare the cost of the draw against the business outcome.</li>
+          <li>If the numbers make sense, offer to help complete the first draw while we are on the call.</li>
+        </ul>
+      </div>
+    </div></div>
+    <div class="more-cue"><div class="mc"><span>scroll</span><svg width="13" height="8" viewBox="0 0 22 14" fill="none"><path d="M2 2l9 9 9-9" stroke="#5ee6ff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg></div></div>
+  </div>
+</div>
+
+<!-- Obstacles 1–8 -->
+<div class="popup" id="pp-o1">
+  <div class="card">
+    <div class="card-head">
+      <div class="eyebrow"><span>What objections do you anticipate? · Obstacle 1 of 8</span></div>
+      <h2 class="card-title qd">I forgot about it / have not gotten around to it</h2>
+    </div>
+    <div class="card-scroller"><div class="card-content">
+      <ul class="snow-list">
+        <li>Totally fair, that happens. The line is already approved, so I would just want to quickly walk you through what is available and see if there is a real use case coming up.</li>
+        <li>Main thing I would ask is: when is your next supplier payment, inventory order, debt payment, or PPC push?</li>
+      </ul>
+    </div></div>
+    <div class="more-cue"><div class="mc"><span>scroll</span><svg width="13" height="8" viewBox="0 0 22 14" fill="none"><path d="M2 2l9 9 9-9" stroke="#5ee6ff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg></div></div>
+  </div>
+</div>
+
+<div class="popup" id="pp-o2">
+  <div class="card">
+    <div class="card-head">
+      <div class="eyebrow"><span>What objections do you anticipate? · Obstacle 2 of 8</span></div>
+      <h2 class="card-title qd">I asked for $300K and only got $250K</h2>
+    </div>
+    <div class="card-scroller"><div class="card-content">
+      <ul class="snow-list">
+        <li>I get that. I would frame the $250K as the starting point, not necessarily the ceiling.</li>
+        <li>As you draw, repay, and build history with Slope, that can help support future line increases. National Bobblehead went from $170K to $250K after additional documentation.</li>
+      </ul>
+    </div></div>
+    <div class="more-cue"><div class="mc"><span>scroll</span><svg width="13" height="8" viewBox="0 0 22 14" fill="none"><path d="M2 2l9 9 9-9" stroke="#5ee6ff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg></div></div>
+  </div>
+</div>
+
+<div class="popup" id="pp-o3">
+  <div class="card">
+    <div class="card-head">
+      <div class="eyebrow"><span>What objections do you anticipate? · Obstacle 3 of 8</span></div>
+      <h2 class="card-title qd">The rate seems high or confusing</h2>
+    </div>
+    <div class="card-scroller"><div class="card-content">
+      <ul class="snow-list">
+        <li>Totally fair. I would want to walk through the actual dollar cost of a draw, because APR and total financing cost can be easy to mix up.</li>
+        <li>The real question is whether the capital creates more value than it costs, like supplier discounts, avoided stockouts, debt payoff, or buying deeper.</li>
+      </ul>
+    </div></div>
+    <div class="more-cue"><div class="mc"><span>scroll</span><svg width="13" height="8" viewBox="0 0 22 14" fill="none"><path d="M2 2l9 9 9-9" stroke="#5ee6ff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg></div></div>
+  </div>
+</div>
+
+<div class="popup" id="pp-o4">
+  <div class="card">
+    <div class="card-head">
+      <div class="eyebrow"><span>What objections do you anticipate? · Obstacle 4 of 8</span></div>
+      <h2 class="card-title qd">Amazon Lending is working fine for me</h2>
+    </div>
+    <div class="card-scroller"><div class="card-content">
+      <ul class="snow-list">
+        <li>That is good to hear. I would not tell you to stop using something that works.</li>
+        <li>I would position Slope as an additional flexible line outside of Amazon's timing, offer size, disbursements, and repayment structure.</li>
+      </ul>
+    </div></div>
+    <div class="more-cue"><div class="mc"><span>scroll</span><svg width="13" height="8" viewBox="0 0 22 14" fill="none"><path d="M2 2l9 9 9-9" stroke="#5ee6ff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg></div></div>
+  </div>
+</div>
+
+<div class="popup" id="pp-o5">
+  <div class="card">
+    <div class="card-head">
+      <div class="eyebrow"><span>What objections do you anticipate? · Obstacle 5 of 8</span></div>
+      <h2 class="card-title qd">I have not heard of Slope</h2>
+    </div>
+    <div class="card-scroller"><div class="card-content">
+      <ul class="snow-list">
+        <li>Totally understandable. A lot of sellers first hear about Slope through the Amazon or marketplace offer.</li>
+        <li>I would point to the J.P. Morgan credit facility, Lead Bank origination, and customer stories like National Bobblehead, Neato, and Continental Cards.</li>
+      </ul>
+    </div></div>
+    <div class="more-cue"><div class="mc"><span>scroll</span><svg width="13" height="8" viewBox="0 0 22 14" fill="none"><path d="M2 2l9 9 9-9" stroke="#5ee6ff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg></div></div>
+  </div>
+</div>
+
+<div class="popup" id="pp-o6">
+  <div class="card">
+    <div class="card-head">
+      <div class="eyebrow"><span>What objections do you anticipate? · Obstacle 6 of 8</span></div>
+      <h2 class="card-title qd">I am not sure what I would use it for right now</h2>
+    </div>
+    <div class="card-scroller"><div class="card-content">
+      <ul class="snow-list">
+        <li>That is exactly what I would want to figure out before recommending a draw.</li>
+        <li>I would look at upcoming supplier payments, inventory orders, PPC, product launches, expensive debt, or supplier discounts to see if there is a real use case.</li>
+      </ul>
+    </div></div>
+    <div class="more-cue"><div class="mc"><span>scroll</span><svg width="13" height="8" viewBox="0 0 22 14" fill="none"><path d="M2 2l9 9 9-9" stroke="#5ee6ff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg></div></div>
+  </div>
+</div>
+
+<div class="popup" id="pp-o7">
+  <div class="card">
+    <div class="card-head">
+      <div class="eyebrow"><span>What objections do you anticipate? · Obstacle 7 of 8</span></div>
+      <h2 class="card-title qd">I am confused on how the draw and repayment process actually works</h2>
+    </div>
+    <div class="card-scroller"><div class="card-content">
+      <ul class="snow-list">
+        <li>You draw through the Slope portal, choose the amount and repayment term, and funds go to your business bank account.</li>
+        <li>Repayment is not a daily revenue sweep from Amazon. You know the schedule upfront, and the line replenishes as you repay.</li>
+      </ul>
+    </div></div>
+    <div class="more-cue"><div class="mc"><span>scroll</span><svg width="13" height="8" viewBox="0 0 22 14" fill="none"><path d="M2 2l9 9 9-9" stroke="#5ee6ff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg></div></div>
+  </div>
+</div>
+
+<div class="popup" id="pp-o8">
+  <div class="card">
+    <div class="card-head">
+      <div class="eyebrow"><span>What objections do you anticipate? · Obstacle 8 of 8</span></div>
+      <h2 class="card-title qd">Let me think about it / not right now</h2>
+    </div>
+    <div class="card-scroller"><div class="card-content">
+      <ul class="snow-list">
+        <li>Of course. I would just want to understand what part you want to think through: rate, timing, line size, trust, or use case.</li>
+        <li>If there is no real use case right now, that is fine. I would schedule the follow-up around the next supplier payment, restock, or growth event.</li>
+      </ul>
+    </div></div>
+    <div class="more-cue"><div class="mc"><span>scroll</span><svg width="13" height="8" viewBox="0 0 22 14" fill="none"><path d="M2 2l9 9 9-9" stroke="#5ee6ff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg></div></div>
+  </div>
+</div>
+
+<!-- Positioning (thesis) -->
+<div class="popup" id="pp-pos">
+  <div class="card thesis-card">
+    <div class="card-head">
+      <div class="eyebrow"><span>Final Run · The Thesis</span></div>
+      <h2 class="card-title">How would you position Slope?</h2>
+    </div>
+    <div class="card-scroller"><div class="card-content">
+      <p class="thesis">Slope is an AI-native working capital platform built specifically for e-commerce sellers. We are backed by J.P. Morgan, both as an investor and credit facility partner, and we work directly with Amazon, Walmart, and Alibaba as a financing partner. The product is a reusable line of credit. You apply once, with no impact to your personal credit score and no personal guaranty required. Once approved, you can draw capital as needed, set a fixed repayment schedule at the time of each draw, and repay without the schedule accelerating based on revenue volume. As each draw is repaid, the line replenishes and becomes available for the next inventory cycle.</p>
+      <p class="thesis"><strong>The value is not just access to capital. It is control over timing.</strong> Slope gives sellers working capital outside of the Amazon disbursement cycle, so they can separate their purchasing timeline from their payout timeline. That allows them to buy earlier, buy deeper, pay suppliers sooner, capture volume discounts, and prepare for peak demand before cash would otherwise be available. In many cases, that creates margin on the COGS side, where early payment, larger orders, and better supplier timing can reduce costs by 15 to 22 percent on a single purchase order. Neato, for example, increased margin by 5.5 percent after using Slope financing to buy deep and early. That is the core position: Slope is not just a lender. It is a capital partner that helps sellers move faster, protect margin, and keep inventory cycles running without being constrained by marketplace payout timing.</p>
+    </div></div>
+    <div class="more-cue"><div class="mc"><span>scroll</span><svg width="13" height="8" viewBox="0 0 22 14" fill="none"><path d="M2 2l9 9 9-9" stroke="#5ee6ff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg></div></div>
+  </div>
+</div>
+
+<!-- First draw (base camp) -->
+<div class="popup" id="pp-draw">
+  <div class="card">
+    <div class="card-head">
+      <div class="eyebrow"><span>Base Camp · The Close</span></div>
+      <h2 class="card-title">How would you get a customer to complete a first draw?</h2>
+    </div>
+    <div class="card-scroller"><div class="card-content">
+      <p class="lede">I would not push for a draw until I understand the use case. My goal would be to find the cleanest business reason to activate, then walk them through the first draw if the numbers make sense.</p>
+
+      <h3 class="fd-label">Approval / confusion</h3>
+      <div class="arrow-row"><span class="ar">→</span> If they forgot about it, quickly re-orient them: $250K approved, first draw has 20% off interest, line is ready when the timing makes sense</div>
+      <div class="arrow-row"><span class="ar">→</span> If APR or fees are confusing, walk through the actual dollar cost of a sample draw</div>
+      <div class="arrow-row"><span class="ar">→</span> Once they understand the line, move into use case</div>
+
+      <h3 class="fd-label">Original $300K request</h3>
+      <div class="arrow-row"><span class="ar">→</span> What was it for? Inventory, supplier payment, PPC, product launch, debt payoff, or seasonal demand?</div>
+      <div class="arrow-row"><span class="ar">→</span> Is that need still active?</div>
+      <div class="arrow-row"><span class="ar">→</span> When do they need the capital?</div>
+
+      <h3 class="fd-label">Amazon Lending</h3>
+      <div class="arrow-row"><span class="ar">→</span> If Amazon Lending has pain around access, repayment, or use of funds, position Slope as the stronger alternative</div>
+      <div class="arrow-row"><span class="ar">→</span> If Amazon Lending is working well, position Slope as an additional line that can run in parallel</div>
+      <div class="arrow-row"><span class="ar">→</span> The goal is not to force a replacement, it is to give them more flexibility</div>
+
+      <h3 class="fd-label">If supplier payment or inventory order is coming up soon</h3>
+      <div class="arrow-row"><span class="ar">→</span> Ask when the payment is due and how they planned to fund it</div>
+      <div class="arrow-row"><span class="ar">→</span> Compare Slope against Amazon Lending, cash on hand, or other financing</div>
+      <div class="arrow-row"><span class="ar">→</span> If the numbers make sense, walk them through the draw amount, term, repayment schedule, and cost on the call</div>
+
+      <h3 class="fd-label">If buying deeper creates margin</h3>
+      <div class="arrow-row"><span class="ar">→</span> Ask if suppliers offer volume discounts or early-payment discounts</div>
+      <div class="arrow-row"><span class="ar">→</span> Connect to Neato: they used Slope to buy deeper, pay suppliers earlier, and improve margin after financing costs</div>
+      <div class="arrow-row"><span class="ar">→</span> Position the draw as margin capture, not just borrowing money</div>
+
+      <h3 class="fd-label">If cash is tied up between supplier payment and Amazon payout</h3>
+      <div class="arrow-row"><span class="ar">→</span> Position Slope as a way to separate their purchasing timeline from Amazon’s payout timeline</div>
+      <div class="arrow-row"><span class="ar">→</span> If the next inventory order, PPC push, or launch is coming up soon, walk through the draw while on the call</div>
+
+      <h3 class="fd-label">Current financing</h3>
+      <div class="arrow-row"><span class="ar">→</span> Are they carrying MCA, revenue-based financing, credit card debt, or another short-term loan?</div>
+      <div class="arrow-row"><span class="ar">→</span> If yes, compare the cost of that debt against Slope</div>
+      <div class="arrow-row"><span class="ar">→</span> Connect to National Bobblehead: they used their first Slope draw to pay off a higher-cost merchant cash advance</div>
+      <div class="arrow-row"><span class="ar">→</span> Position the draw as a way to lower financing cost if the payoff math works</div>
+
+      <h3 class="fd-label">If they do not need capital right now</h3>
+      <div class="arrow-row"><span class="ar">→</span> Do not force the draw</div>
+      <div class="arrow-row"><span class="ar">→</span> Make sure they understand the line and schedule follow-up around the next supplier payment, inventory order, launch, or PPC push</div>
+      <div class="arrow-row"><span class="ar">→</span> Only suggest a small test draw if they expect to use the line soon and want to get comfortable with the portal before a larger payment is due</div>
+
+      <h3 class="fd-label">Close:</h3>
+      <div class="close-quote">
+        <p>“Based on what you told me, it sounds like the clearest use case is [supplier payment / inventory order / debt payoff / buying deeper / PPC or launch]. Since I already have you on the phone, I’m happy to help you pull up the portal and walk you through the dashboard: what your available credit means, how to select a draw amount, how the repayment term works, and what the total cost would look like.</p>
+        <div class="cq-label">If the capital need is coming up soon:</div>
+        <p>Since that payment is coming up on [date], we can walk through your first real draw now. I can show you the amount, term, repayment schedule, and total cost before you confirm anything. If the numbers make sense, we can get it started while we are on the call.</p>
+        <div class="cq-label">If the capital need is further out:</div>
+        <p>Since you do not need the full capital right away, one option is a small test draw so you can get comfortable with the portal and repayment flow before a larger payment is due, especially with the 20% interest discount on the first draw. If you would rather wait, that is completely fine too. I can follow up a few days before [capital event] and walk you through it then.”</p>
+      </div>
+    </div></div>
+    <div class="more-cue"><div class="mc"><span>scroll</span><svg width="13" height="8" viewBox="0 0 22 14" fill="none"><path d="M2 2l9 9 9-9" stroke="#5ee6ff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg></div></div>
+  </div>
+</div>
+
+<!-- speech bubble -->
+<div id="bubble"><div class="bubble-card">How would you get a customer to complete a first draw?</div></div>
+
+<!-- progress tracker -->
+<div id="tracker">
+  <svg class="peak-ic" width="16" height="11" viewBox="0 0 16 11" fill="none"><path d="M8 1l6.5 9H1.5L8 1z" stroke="rgba(255,255,255,0.7)" stroke-width="1.2"/></svg>
+  <div class="rail"></div>
+  <div id="tr-skier"></div>
+  <svg class="camp-ic" width="12" height="12" viewBox="0 0 12 12" fill="none"><rect x="1.5" y="1.5" width="9" height="9" stroke="rgba(255,255,255,0.7)" stroke-width="1.2"/></svg>
+</div>
+
+<!-- final card -->
+<div id="final-card">
+  <div class="fc-inner">
+    <div class="fc-eyebrow">End of Run</div>
+    <div class="fc-title">Scenario 1: Summit Commerce</div>
+    <div class="fc-sub">From the summit to the first draw — thanks for making the descent.</div>
+    <div class="fc-foot">Prepared by Arman · Slope</div>
+  </div>
+</div>
+
+<script type="module">
+import * as THREE from 'three';
+
+const fatal = (e)=>{ const f=document.getElementById('fatal'); f.style.display='flex'; f.textContent='Something went wrong:\n\n'+(e&&e.stack||e); console.error(e); };
+window.addEventListener('error', ev=>{ if(ev.error) fatal(ev.error); });
+
+/* ============================= utils ============================= */
+const clamp=(v,a,b)=>v<a?a:(v>b?b:v);
+const lerp=(a,b,t)=>a+(b-a)*t;
+const sstep=t=>{t=clamp(t,0,1);return t*t*(3-2*t);};
+const easeIO=t=>0.5-0.5*Math.cos(Math.PI*clamp(t,0,1));
+function hash2(i,j){const n=Math.sin(i*127.1+j*311.7)*43758.5453;return n-Math.floor(n);}
+function vnoise(x,z){const i=Math.floor(x),j=Math.floor(z),fx=x-i,fz=z-j;const sx=fx*fx*(3-2*fx),sz=fz*fz*(3-2*fz);const a=hash2(i,j),b=hash2(i+1,j),c=hash2(i,j+1),d=hash2(i+1,j+1);return a+(b-a)*sx+(c-a)*sz+(a-b-c+d)*sx*sz;}
+function canvasTex(w,h,draw){const c=document.createElement('canvas');c.width=w;c.height=h;const g=c.getContext('2d');draw(g,w,h);const t=new THREE.CanvasTexture(c);t.anisotropy=4;t.colorSpace=THREE.SRGBColorSpace;return t;}
+function radialTex(size,stops){return canvasTex(size,size,(g)=>{const r=size/2;const gr=g.createRadialGradient(r,r,0,r,r,r);for(const [o,c] of stops)gr.addColorStop(o,c);g.fillStyle=gr;g.fillRect(0,0,size,size);});}
+
+/* ============================= path ============================= */
+const AIR=3.0;
+const CP=[
+ {x:0,   y:150, z:14},
+ {x:0,   y:150, z:6,   tag:'start'},
+ {x:-1,  y:149, z:-6},
+ {x:4,   y:145, z:-22},
+ {x:-5,  y:139, z:-40},
+ {x:3,   y:134, z:-56},
+ {x:0,   y:131, z:-66, tag:'rock'},
+ {x:-7,  y:125, z:-84},
+ {x:4,   y:118, z:-104},
+ {x:-5,  y:112, z:-122},
+ {x:0,   y:107, z:-138,tag:'sign1'},
+ {x:3,   y:101, z:-154},
+ {x:-2,  y:95,  z:-170},
+ {x:0,   y:92,  z:-182,tag:'j1', air:AIR},
+ {x:2,   y:86.5,z:-194},
+ {x:-4,  y:81,  z:-210},
+ {x:-1,  y:78,  z:-222,tag:'j2', air:AIR},
+ {x:3,   y:73,  z:-234},
+ {x:-3,  y:68,  z:-250},
+ {x:0,   y:65,  z:-262,tag:'j3', air:AIR},
+ {x:4,   y:59.5,z:-274},
+ {x:-4,  y:54.5,z:-292},
+ {x:1,   y:51,  z:-308,tag:'sign2'},
+ {x:-6,  y:47.5,z:-322,tag:'o1'},
+ {x:2,   y:44.5,z:-336},
+ {x:7,   y:41.5,z:-348,tag:'o2'},
+ {x:-2,  y:38.5,z:-360},
+ {x:-7,  y:35.5,z:-372,tag:'o3'},
+ {x:3,   y:32.5,z:-384},
+ {x:8,   y:29.5,z:-396,tag:'o4'},
+ {x:-1,  y:27,  z:-408},
+ {x:-7,  y:24.5,z:-420,tag:'o5'},
+ {x:3,   y:22,  z:-432},
+ {x:7,   y:19.5,z:-444,tag:'o6'},
+ {x:-2,  y:17.5,z:-456},
+ {x:-7,  y:15.5,z:-468,tag:'o7'},
+ {x:2,   y:13.5,z:-480},
+ {x:7,   y:12,  z:-492,tag:'o8'},
+ {x:0,   y:10.5,z:-504},
+ {x:0,   y:9.5, z:-516,tag:'sign3'},
+ {x:-2,  y:3,   z:-530},
+ {x:1,   y:-3,  z:-544,tag:'pos'},
+ {x:-1,  y:-9,  z:-558},
+ {x:0,   y:-13, z:-574},
+ {x:1,   y:-14.5,z:-590},
+ {x:0,   y:-15, z:-606,tag:'camp'},
+ {x:0,   y:-15, z:-620},
+ {x:0,   y:-15, z:-632},
+];
+const skiCurve=new THREE.CatmullRomCurve3(CP.map(c=>new THREE.Vector3(c.x,c.y,c.z)),false,'centripetal');
+const groundCurve=new THREE.CatmullRomCurve3(CP.map(c=>new THREE.Vector3(c.x,c.y-(c.air||0),c.z)),false,'centripetal');
+skiCurve.arcLengthDivisions=1200; groundCurve.arcLengthDivisions=1200;
+skiCurve.updateArcLengths(); groundCurve.updateArcLengths();
+
+const tagU={};
+{
+  const N=2400, pts=[];
+  for(let i=0;i<=N;i++) pts.push(skiCurve.getPointAt(i/N));
+  for(const c of CP){ if(!c.tag) continue;
+    let best=0,bd=1e9;
+    for(let i=0;i<=N;i++){const dx=pts[i].x-c.x,dy=pts[i].y-c.y,dz=pts[i].z-c.z;const dd=dx*dx+dy*dy+dz*dz;if(dd<bd){bd=dd;best=i;}}
+    tagU[c.tag]=best/N;
+  }
+}
+
+const GS=900, gxA=new Float32Array(GS+1), gyA=new Float32Array(GS+1), gzA=new Float32Array(GS+1);
+for(let i=0;i<=GS;i++){const p=groundCurve.getPointAt(i/GS);gxA[i]=p.x;gyA[i]=p.y;gzA[i]=p.z;}
+function heightInfo(x,z){
+  let lo=0,hi=GS;
+  while(hi-lo>1){const m=(lo+hi)>>1; if(gzA[m]>z)lo=m;else hi=m;}
+  let best=lo,bd=Infinity;
+  for(let k=Math.max(0,lo-16);k<=Math.min(GS,lo+16);k++){const dx=gxA[k]-x,dz=gzA[k]-z;const dd=dx*dx+dz*dz;if(dd<bd){bd=dd;best=k;}}
+  const d=Math.sqrt(bd);
+  let base=gyA[best];
+  if(z>gzA[0]) base=gyA[0]+(z-gzA[0])*0.9;
+  if(z<gzA[GS]) base=gyA[GS];
+  let f=sstep((-z-500)/85); if(z>gzA[0]) f=0;
+  let rise; if(d<8) rise=d*d*0.02; else rise=1.28+(d-8)*0.22;
+  rise=Math.min(rise,30)*(1-0.85*f);
+  const amp=sstep((d-5)/20)*(1-0.7*f);
+  const n=(vnoise(x*0.045,z*0.045)-0.5)*4.2*amp+(vnoise(x*0.16+7,z*0.16+3)-0.5)*1.1*amp;
+  return {y:base+rise+n,d};
+}
+const heightAt=(x,z)=>heightInfo(x,z).y;
+
+/* ============================= three setup ============================= */
+let renderer;
+try{
+  renderer=new THREE.WebGLRenderer({canvas:document.getElementById('scene'),antialias:true});
+}catch(e){ fatal('WebGL is not available in this browser.\n'+e); throw e; }
+renderer.setPixelRatio(Math.min(devicePixelRatio,1.75));
+renderer.setSize(innerWidth,innerHeight);
+renderer.toneMapping=THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure=1.0;
+
+const scene=new THREE.Scene();
+scene.fog=new THREE.Fog(0x0a1226,70,430);
+const camera=new THREE.PerspectiveCamera(55,innerWidth/innerHeight,0.1,1600);
+
+// midnight sky dome
+const skyTex=canvasTex(16,512,(g,w,h)=>{const gr=g.createLinearGradient(0,0,0,h);
+  gr.addColorStop(0,'#03050c');gr.addColorStop(0.40,'#0a1228');gr.addColorStop(0.66,'#1a2a52');gr.addColorStop(0.84,'#3d5384');gr.addColorStop(0.94,'#6c6f8e');gr.addColorStop(1,'#8d7c6a');
+  g.fillStyle=gr;g.fillRect(0,0,w,h);});
+const sky=new THREE.Mesh(new THREE.SphereGeometry(1000,24,14),new THREE.MeshBasicMaterial({map:skyTex,side:THREE.BackSide,fog:false,depthWrite:false}));
+sky.renderOrder=-10;
+scene.add(sky);
+
+// stars
+{
+  const N=420, a=new Float32Array(N*3);
+  for(let i=0;i<N;i++){
+    const th=Math.random()*Math.PI*2, ph=Math.acos(Math.random()*0.85);
+    const r=940;
+    a[i*3]=r*Math.sin(ph)*Math.cos(th); a[i*3+1]=r*Math.cos(ph); a[i*3+2]=r*Math.sin(ph)*Math.sin(th);
+  }
+  const g=new THREE.BufferGeometry(); g.setAttribute('position',new THREE.BufferAttribute(a,3));
+  const stars=new THREE.Points(g,new THREE.PointsMaterial({color:0xcfe2ff,size:1.6,sizeAttenuation:false,transparent:true,opacity:0.7,fog:false,depthWrite:false}));
+  sky.add(stars);
+}
+
+// faint amber horizon glow
+const sunSpr=new THREE.Sprite(new THREE.SpriteMaterial({map:radialTex(256,[[0,'rgba(205,150,95,0.5)'],[0.4,'rgba(160,115,80,0.2)'],[1,'rgba(160,115,80,0)']]),fog:false,depthWrite:false,transparent:true}));
+sunSpr.scale.set(400,260,1); sunSpr.position.set(-420,-10,-840); scene.add(sunSpr);
+
+// lights — cold moonlight
+scene.add(new THREE.HemisphereLight(0x44598c,0x141b2e,0.85));
+const moon=new THREE.DirectionalLight(0xbfd4ff,1.7); moon.position.set(-55,70,-35); scene.add(moon);
+const fill=new THREE.DirectionalLight(0x24365f,0.6); fill.position.set(70,40,60); scene.add(fill);
+const skierLight=new THREE.PointLight(0xaee8ff,9,26,1.8); scene.add(skierLight);
+
+/* ============================= terrain ============================= */
+{
+  const W=300,L=770,SX=130,SZ=330;
+  const geo=new THREE.PlaneGeometry(W,L,SX,SZ);
+  geo.rotateX(-Math.PI/2);
+  geo.translate(0,0,-330);
+  const pos=geo.attributes.position;
+  const colors=new Float32Array(pos.count*3);
+  const cA=new THREE.Color(0x9fb2d6), cB=new THREE.Color(0xdde8fb), tmp=new THREE.Color();
+  for(let i=0;i<pos.count;i++){
+    const x=pos.getX(i), z=pos.getZ(i);
+    const hi=heightInfo(x,z);
+    pos.setY(i,hi.y);
+    const pf=1-sstep((hi.d-2.5)/4);
+    tmp.copy(cA).lerp(cB,pf*0.85+0.0);
+    const v=0.9+0.12*vnoise(x*0.09+5,z*0.09);
+    colors[i*3]=tmp.r*v; colors[i*3+1]=tmp.g*v; colors[i*3+2]=Math.min(1,tmp.b*(v*1.02));
+  }
+  geo.setAttribute('color',new THREE.BufferAttribute(colors,3));
+  geo.computeVertexNormals();
+  scene.add(new THREE.Mesh(geo,new THREE.MeshStandardMaterial({vertexColors:true,flatShading:true,roughness:0.92,metalness:0.02})));
+}
+// distant sharp peaks
+{
+  const rockM=new THREE.MeshStandardMaterial({color:0x141d33,flatShading:true,roughness:0.9});
+  const snowM=new THREE.MeshStandardMaterial({color:0x9fb4d8,flatShading:true,roughness:0.9});
+  const peaks=[[-190,-120,120,230],[210,-200,140,280],[-240,-330,150,290],[250,-430,130,255],[-200,-520,110,220],[180,-40,100,210]];
+  for(const [px,pz,r,h] of peaks){
+    const gy=heightAt(px,pz);
+    const m=new THREE.Mesh(new THREE.ConeGeometry(r,h,5),rockM);
+    m.position.set(px,gy+h/2-30,pz); m.rotation.y=Math.random()*3;
+    const cap=new THREE.Mesh(new THREE.ConeGeometry(r*0.42,h*0.4,5),snowM);
+    cap.position.set(px,gy+h-30-h*0.2+1,pz); cap.rotation.y=m.rotation.y;
+    scene.add(m,cap);
+  }
+}
+
+/* ============================= trail glow (laser line) ============================= */
+class OffsetCurve extends THREE.Curve{
+  constructor(base,dy){super();this.base=base;this.dy=dy;this.arcLengthDivisions=1200;}
+  getPoint(t,target=new THREE.Vector3()){const p=this.base.getPointAt(t);target.copy(p);target.y+=this.dy;return target;}
+}
+const trailCurve=new OffsetCurve(skiCurve,0.1);
+const TUBULAR=1100, RADIAL=6, IDX_PER_SEG=RADIAL*6;
+const trailCore=new THREE.Mesh(
+  new THREE.TubeGeometry(trailCurve,TUBULAR,0.09,RADIAL,false),
+  new THREE.MeshBasicMaterial({color:0xe9feff,fog:false,transparent:true,opacity:1}));
+const trailHalo=new THREE.Mesh(
+  new THREE.TubeGeometry(trailCurve,TUBULAR,0.34,RADIAL,false),
+  new THREE.MeshBasicMaterial({color:0x5ee6ff,fog:false,transparent:true,opacity:0.4,blending:THREE.AdditiveBlending,depthWrite:false}));
+const trailWide=new THREE.Mesh(
+  new THREE.TubeGeometry(trailCurve,TUBULAR,0.95,RADIAL,false),
+  new THREE.MeshBasicMaterial({color:0x2bb8e0,fog:false,transparent:true,opacity:0.10,blending:THREE.AdditiveBlending,depthWrite:false}));
+trailCore.geometry.setDrawRange(0,0); trailHalo.geometry.setDrawRange(0,0); trailWide.geometry.setDrawRange(0,0);
+scene.add(trailCore,trailHalo,trailWide);
+
+/* ============================= characters ============================= */
+function buildBuddy({suit=0x12161f,visor=0x5ee6ff,skis=true}={}){
+  const g=new THREE.Group(); const inner=new THREE.Group(); g.add(inner);
+  const suitM=new THREE.MeshStandardMaterial({color:suit,roughness:0.32,metalness:0.5});
+  // legs — long, slim
+  const legGeo=new THREE.CapsuleGeometry(0.125,0.6,4,10);
+  const legL=new THREE.Mesh(legGeo,suitM); legL.position.set(-0.16,0.58,0);
+  const legR=legL.clone(); legR.position.x=0.16;
+  inner.add(legL,legR);
+  // torso
+  const torso=new THREE.Group(); torso.position.y=1.08; inner.add(torso);
+  const body=new THREE.Mesh(new THREE.CapsuleGeometry(0.26,0.6,4,12),suitM); body.position.y=0.34; torso.add(body);
+  // arms
+  const armGeo=new THREE.CapsuleGeometry(0.095,0.5,4,8);
+  const armL=new THREE.Group(); armL.position.set(-0.34,0.66,0); torso.add(armL);
+  const aL=new THREE.Mesh(armGeo,suitM); aL.position.y=-0.32; armL.add(aL);
+  const armR=new THREE.Group(); armR.position.set(0.34,0.66,0); torso.add(armR);
+  const aR=new THREE.Mesh(armGeo,suitM); aR.position.y=-0.32; armR.add(aR);
+  armL.rotation.z=0.42; armR.rotation.z=-0.42;
+  // head — smooth, sealed (figure defined by silhouette)
+  const headG=new THREE.Group(); headG.position.y=1.18; torso.add(headG);
+  headG.add(new THREE.Mesh(new THREE.SphereGeometry(0.235,18,16),suitM));
+  const strip=new THREE.Mesh(new THREE.BoxGeometry(0.26,0.045,0.06),
+    new THREE.MeshStandardMaterial({color:0x0a0e16,emissive:visor,emissiveIntensity:2.4,roughness:0.3}));
+  strip.position.set(0,0.04,0.2); headG.add(strip);
+  let skiL=null,skiR=null;
+  if(skis){
+    const skiMat=new THREE.MeshStandardMaterial({color:0x0b0f18,emissive:0x35cdee,emissiveIntensity:0.55,roughness:0.3,metalness:0.6});
+    const skiGeo=new THREE.BoxGeometry(0.14,0.035,2.55);
+    skiL=new THREE.Mesh(skiGeo,skiMat); skiL.position.set(-0.18,0.05,0.28);
+    skiR=skiL.clone(); skiR.position.x=0.18;
+    const tipGeo=new THREE.BoxGeometry(0.14,0.035,0.3);
+    const tL=new THREE.Mesh(tipGeo,skiMat); tL.position.set(0,0.05,1.4); tL.rotation.x=-0.45; skiL.add(tL);
+    const tR=tL.clone(); skiR.add(tR);
+    inner.add(skiL,skiR);
+    const poleGeo=new THREE.CylinderGeometry(0.016,0.016,1.05,5);
+    const poleMat=new THREE.MeshStandardMaterial({color:0x39455c,roughness:0.35,metalness:0.6});
+    const pL=new THREE.Mesh(poleGeo,poleMat); pL.position.set(0,-0.55,-0.12); pL.rotation.x=0.5; armL.add(pL);
+    const pR=pL.clone(); armR.add(pR);
+  }else{
+    const bootGeo=new THREE.BoxGeometry(0.18,0.13,0.32);
+    const bM=new THREE.MeshStandardMaterial({color:0x0d1220,roughness:0.5,metalness:0.4});
+    const bL=new THREE.Mesh(bootGeo,bM); bL.position.set(-0.16,0.07,0.04);
+    const bR=bL.clone(); bR.position.x=0.16;
+    inner.add(bL,bR);
+  }
+  return {g,inner,torso,armL,armR,headG};
+}
+const skier=buildBuddy({suit:0x131826,visor:0x5ee6ff,skis:true});
+scene.add(skier.g);
+const friend=buildBuddy({suit:0x1d2433,visor:0xffffff,skis:false});
+scene.add(friend.g);
+
+// aura + blob shadow
+const glowSpr=new THREE.Sprite(new THREE.SpriteMaterial({map:radialTex(256,[[0,'rgba(190,242,255,0.5)'],[0.35,'rgba(110,210,255,0.16)'],[1,'rgba(110,210,255,0)']]),transparent:true,depthWrite:false,blending:THREE.AdditiveBlending,fog:false}));
+glowSpr.scale.set(7,7,1); scene.add(glowSpr);
+const shadowTex=radialTex(128,[[0,'rgba(2,6,14,0.5)'],[0.7,'rgba(2,6,14,0.2)'],[1,'rgba(2,6,14,0)']]);
+const blob=new THREE.Mesh(new THREE.PlaneGeometry(2.4,2.4),new THREE.MeshBasicMaterial({map:shadowTex,transparent:true,depthWrite:false}));
+blob.rotation.x=-Math.PI/2; scene.add(blob);
+const blobF=blob.clone(); scene.add(blobF);
+
+/* ============================= props ============================= */
+// monolith wayfinding markers
+function makeMonolith(lines,{w=5.6,h=3.2,small=false}={}){
+  const g=new THREE.Group();
+  if(small){w=3.4;h=2.2;}
+  const slab=new THREE.Mesh(new THREE.BoxGeometry(w,h,0.22),
+    new THREE.MeshStandardMaterial({color:0x0b0e16,roughness:0.55,metalness:0.35}));
+  slab.position.y=h/2;
+  const edge=new THREE.Mesh(new THREE.BoxGeometry(0.05,h,0.24),
+    new THREE.MeshStandardMaterial({color:0x0b0e16,emissive:0x5ee6ff,emissiveIntensity:1.8,roughness:0.4}));
+  edge.position.set(-w/2+0.08,h/2,0);
+  const tex=canvasTex(1024,Math.round(1024*h/w),(c,W,H)=>{
+    c.clearRect(0,0,W,H);
+    c.fillStyle='rgba(242,245,251,0.96)'; c.textAlign='center'; c.textBaseline='middle';
+    try{c.letterSpacing='10px';}catch(e){}
+    const fs=lines.length>1?small?86:96:small?96:110;
+    c.font=`600 ${fs}px Inter, sans-serif`;
+    const cy=H/2-(lines.length-1)*fs*0.68;
+    lines.forEach((ln,i)=>c.fillText(ln.toUpperCase(),W/2,cy+i*fs*1.36));
+    c.fillStyle='rgba(94,230,255,0.9)';
+    c.fillRect(W/2-90,H-46,180,4);
+  });
+  const txt=new THREE.Mesh(new THREE.PlaneGeometry(w*0.94,h*0.94),
+    new THREE.MeshBasicMaterial({map:tex,transparent:true,fog:false}));
+  txt.position.set(0,h/2,0.13);
+  g.add(slab,edge,txt);
+  return g;
+}
+function placeOnPath(obj,u,{side=0,fwd=0,faceBack=true}={}){
+  const p=skiCurve.getPointAt(u), t=skiCurve.getTangentAt(u);
+  const f=new THREE.Vector3(t.x,0,t.z).normalize();
+  const r=new THREE.Vector3(f.z,0,-f.x);
+  const pos=p.clone().addScaledVector(r,side).addScaledVector(f,fwd);
+  pos.y=heightAt(pos.x,pos.z);
+  obj.position.copy(pos);
+  if(faceBack) obj.rotation.y=Math.atan2(-f.x,-f.z)+(side>0?-0.3:0.3);
+  scene.add(obj);
+  return obj;
+}
+placeOnPath(makeMonolith(['What questions','would you ask?']),tagU.sign1,{side:5.5,fwd:2});
+placeOnPath(makeMonolith(['What objections','do you anticipate?']),tagU.sign2,{side:-5.5,fwd:2});
+placeOnPath(makeMonolith(['How would you','position Slope?']),tagU.sign3,{side:5.5,fwd:2});
+
+// slender dark spruce
+const treeFol1=[],treeFol2=[];
+{
+  const trunkGeo=new THREE.CylinderGeometry(0.09,0.13,1.3,5); trunkGeo.translate(0,0.65,0);
+  const fol1Geo=new THREE.ConeGeometry(0.95,4.6,6); fol1Geo.translate(0,3.4,0);
+  const fol2Geo=new THREE.ConeGeometry(0.6,3.0,6); fol2Geo.translate(0,6.0,0);
+  const N=120;
+  const trunks=new THREE.InstancedMesh(trunkGeo,new THREE.MeshStandardMaterial({color:0x1a1712,roughness:1,flatShading:true}),N);
+  const fol1=new THREE.InstancedMesh(fol1Geo,new THREE.MeshStandardMaterial({color:0xffffff,roughness:0.95,flatShading:true}),N);
+  const fol2=new THREE.InstancedMesh(fol2Geo,new THREE.MeshStandardMaterial({color:0xffffff,roughness:0.95,flatShading:true}),N);
+  const m=new THREE.Matrix4(), q=new THREE.Quaternion(), e=new THREE.Euler(), s=new THREE.Vector3(), v=new THREE.Vector3();
+  const g1=new THREE.Color(0x13243a), g2=new THREE.Color(0x0f1c2e), g3=new THREE.Color(0x1a3147), col=new THREE.Color();
+  let placed=0, tries=0;
+  while(placed<N && tries<4000){
+    tries++;
+    const u=0.015+Math.random()*0.93;
+    const p=skiCurve.getPointAt(u), t=skiCurve.getTangentAt(u);
+    const f=new THREE.Vector3(t.x,0,t.z).normalize();
+    const r=new THREE.Vector3(f.z,0,-f.x);
+    const side=(Math.random()<0.5?-1:1)*(11+Math.random()*40);
+    v.copy(p).addScaledVector(r,side);
+    if(v.z<-578&&Math.random()<0.8) continue;
+    v.y=heightAt(v.x,v.z);
+    const sc=0.8+Math.random()*1.0;
+    e.set(0,Math.random()*6.28,0); q.setFromEuler(e); s.set(sc,sc*(0.95+Math.random()*0.3),sc);
+    m.compose(v,q,s);
+    trunks.setMatrixAt(placed,m); fol1.setMatrixAt(placed,m); fol2.setMatrixAt(placed,m);
+    col.copy([g1,g2,g3][placed%3]);
+    fol1.setColorAt(placed,col); fol2.setColorAt(placed,col.clone().multiplyScalar(1.25));
+    placed++;
+  }
+  trunks.count=fol1.count=fol2.count=placed;
+  if(fol1.instanceColor)fol1.instanceColor.needsUpdate=true;
+  if(fol2.instanceColor)fol2.instanceColor.needsUpdate=true;
+  scene.add(trunks,fol1,fol2);
+}
+// dark rock shards
+{
+  const geo=new THREE.IcosahedronGeometry(1,0);
+  const mat=new THREE.MeshStandardMaterial({color:0x1c2740,roughness:0.85,metalness:0.1,flatShading:true});
+  const N=34; const inst=new THREE.InstancedMesh(geo,mat,N);
+  const m=new THREE.Matrix4(),q=new THREE.Quaternion(),e=new THREE.Euler(),s=new THREE.Vector3(),v=new THREE.Vector3();
+  for(let i=0;i<N;i++){
+    const u=0.02+Math.random()*0.92;
+    const p=skiCurve.getPointAt(u), t=skiCurve.getTangentAt(u);
+    const f=new THREE.Vector3(t.x,0,t.z).normalize(); const r=new THREE.Vector3(f.z,0,-f.x);
+    v.copy(p).addScaledVector(r,(Math.random()<0.5?-1:1)*(13+Math.random()*34));
+    v.y=heightAt(v.x,v.z)+0.1;
+    e.set(Math.random()*0.4,Math.random()*6,Math.random()*0.4); q.setFromEuler(e);
+    const sc=0.5+Math.random()*1.3; s.set(sc*0.9,sc*1.7,sc*0.8);
+    m.compose(v,q,s); inst.setMatrixAt(i,m);
+  }
+  scene.add(inst);
+}
+
+// jump kickers — sharp white wedges
+const kickMat=new THREE.MeshStandardMaterial({color:0xcfdcf2,roughness:0.85,flatShading:true});
+for(const tag of ['j1','j2','j3']){
+  const u=tagU[tag]-0.0085;
+  const p=skiCurve.getPointAt(u), t=skiCurve.getTangentAt(u);
+  const f=new THREE.Vector3(t.x,0,t.z).normalize();
+  const k=new THREE.Mesh(new THREE.BoxGeometry(3.2,0.4,2.6),kickMat);
+  const gy=heightAt(p.x,p.z);
+  k.position.set(p.x,gy+0.12,p.z);
+  k.rotation.y=Math.atan2(f.x,f.z);
+  k.rotation.x=-0.38;
+  scene.add(k);
+}
+
+/* obstacles */
+function badgeSprite(label){
+  const t=canvasTex(160,160,(c)=>{
+    c.beginPath();c.arc(80,80,62,0,6.3);c.strokeStyle='rgba(255,255,255,0.75)';c.lineWidth=5;c.stroke();
+    c.beginPath();c.arc(80,80,62,0,6.3);c.fillStyle='rgba(5,8,16,0.55)';c.fill();
+    c.fillStyle='rgba(242,245,251,0.95)';c.font='600 64px Inter, sans-serif';c.textAlign='center';c.textBaseline='middle';c.fillText(label,80,84);
+  });
+  const s=new THREE.Sprite(new THREE.SpriteMaterial({map:t,transparent:true,depthWrite:false}));
+  s.scale.set(1.45,1.45,1);
+  return s;
+}
+const shardMat=new THREE.MeshStandardMaterial({color:0x202c48,roughness:0.8,metalness:0.15,flatShading:true});
+const shardCapMat=new THREE.MeshStandardMaterial({color:0xaebfdd,roughness:0.95,flatShading:true});
+function makeShardRock(scale=1){
+  const g=new THREE.Group();
+  const r1=new THREE.Mesh(new THREE.IcosahedronGeometry(1.4,0),shardMat); r1.scale.set(0.9*scale,1.9*scale,0.8*scale); r1.position.y=1.5*scale; r1.rotation.y=0.6; g.add(r1);
+  const r2=new THREE.Mesh(new THREE.IcosahedronGeometry(1.0,0),shardMat); r2.scale.set(0.7*scale,1.2*scale,0.6*scale); r2.position.set(1.0*scale,0.8*scale,0.2); r2.rotation.y=1.9; g.add(r2);
+  const c=new THREE.Mesh(new THREE.IcosahedronGeometry(0.8,0),shardCapMat); c.scale.set(0.8*scale,0.3*scale,0.7*scale); c.position.y=2.9*scale; g.add(c);
+  return g;
+}
+function makeDarkSpruce(scale=1.7){
+  const g=new THREE.Group();
+  const M=(c)=>new THREE.MeshStandardMaterial({color:c,roughness:0.95,flatShading:true});
+  const tr=new THREE.Mesh(new THREE.CylinderGeometry(0.12,0.17,1.4,5),M(0x1a1712)); tr.position.y=0.7; g.add(tr);
+  const f1=new THREE.Mesh(new THREE.ConeGeometry(1.05,4.8,7),M(0x13243a)); f1.position.y=3.4; g.add(f1);
+  const f2=new THREE.Mesh(new THREE.ConeGeometry(0.66,3.1,7),M(0x1a3147)); f2.position.y=6.1; g.add(f2);
+  g.scale.setScalar(scale);
+  return g;
+}
+{
+  const u=tagU.rock;
+  placeOnPath(makeShardRock(1.6),u,{side:2.6,fwd:5.5,faceBack:false});
+  placeOnPath(makeMonolith(['Mental Model'],{small:true}),u,{side:-4.6,fwd:3});
+}
+const obstacleKinds=['rock','tree','rock','tree','rock','tree','rock','tree'];
+for(let i=0;i<8;i++){
+  const u=tagU['o'+(i+1)];
+  const obj=obstacleKinds[i]==='rock'?makeShardRock(1.1+(i%3)*0.18):makeDarkSpruce(1.45+(i%2)*0.3);
+  placeOnPath(obj,u,{side:(i%2?-1:1)*1.6,fwd:5,faceBack:false});
+  const b=badgeSprite(String(i+1));
+  b.position.copy(obj.position); b.position.y+=obstacleKinds[i]==='rock'?6.4:14.6;
+  scene.add(b);
+}
+
+/* ============================= base camp — single architectural structure ============================= */
+function campY(x,z){return heightAt(x,z);}
+{
+  const g=new THREE.Group();
+  const darkM=new THREE.MeshStandardMaterial({color:0x0a0d15,roughness:0.5,metalness:0.35});
+  // long low pavilion
+  const body=new THREE.Mesh(new THREE.BoxGeometry(15,3.0,6),darkM); body.position.y=1.5; g.add(body);
+  // cantilevered roof slab
+  const roof=new THREE.Mesh(new THREE.BoxGeometry(18,0.22,7.6),darkM); roof.position.set(-0.8,3.2,0.4); g.add(roof);
+  // thin columns under the overhang
+  const colGeo=new THREE.CylinderGeometry(0.06,0.06,3.1,6);
+  for(const cx of [-8.2,-4.5]){const c=new THREE.Mesh(colGeo,darkM);c.position.set(cx,1.55,3.4);g.add(c);}
+  // single horizontal light line across the facade
+  const lineM=new THREE.MeshStandardMaterial({color:0x0a0d15,emissive:0xe8fbff,emissiveIntensity:2.6,roughness:0.3});
+  const line=new THREE.Mesh(new THREE.BoxGeometry(14.4,0.09,0.05),lineM); line.position.set(0,2.05,3.03); g.add(line);
+  // recessed door slit
+  const slit=new THREE.Mesh(new THREE.BoxGeometry(0.07,2.2,0.05),lineM); slit.position.set(3.4,1.1,3.03); g.add(slit);
+  // snow on the roof
+  const snowM=new THREE.MeshStandardMaterial({color:0x9fb4d8,roughness:1,flatShading:true});
+  const rs=new THREE.Mesh(new THREE.BoxGeometry(18,0.1,7.6),snowM); rs.position.set(-0.8,3.36,0.4); g.add(rs);
+  g.position.set(12,campY(12,-601),-601); g.rotation.y=-0.55;
+  scene.add(g);
+  // vertical light pylon — a cold beacon
+  const pylon=new THREE.Mesh(new THREE.BoxGeometry(0.14,6.2,0.14),
+    new THREE.MeshStandardMaterial({color:0x0a0d15,emissive:0x5ee6ff,emissiveIntensity:2.2,roughness:0.4}));
+  pylon.position.set(-7,campY(-7,-596)+3.1,-596); scene.add(pylon);
+  const pylonGlow=new THREE.Sprite(new THREE.SpriteMaterial({map:radialTex(128,[[0,'rgba(94,230,255,0.4)'],[1,'rgba(94,230,255,0)']]),transparent:true,blending:THREE.AdditiveBlending,depthWrite:false}));
+  pylonGlow.scale.set(7,9,1); pylonGlow.position.copy(pylon.position); scene.add(pylonGlow);
+}
+{
+  const fx=-3.1, fz=-607.5;
+  friend.g.position.set(fx,campY(fx,fz),fz);
+  friend.g.rotation.y=Math.atan2(0-fx,(-606)-fz);
+}
+
+/* ============================= snow, clouds, birds ============================= */
+const SNOW_N=380;
+const snowGeo=new THREE.BufferGeometry();
+{
+  const a=new Float32Array(SNOW_N*3);
+  for(let i=0;i<SNOW_N;i++){a[i*3]=(Math.random()-0.5)*100;a[i*3+1]=(Math.random()-0.5)*64;a[i*3+2]=(Math.random()-0.5)*100;}
+  snowGeo.setAttribute('position',new THREE.BufferAttribute(a,3));
+}
+const snowPts=new THREE.Points(snowGeo,new THREE.PointsMaterial({size:0.22,map:radialTex(64,[[0,'rgba(235,245,255,1)'],[0.5,'rgba(235,245,255,0.5)'],[1,'rgba(235,245,255,0)']]),transparent:true,depthWrite:false,opacity:0.65}));
+scene.add(snowPts);
+const snowSeed=new Float32Array(SNOW_N); for(let i=0;i<SNOW_N;i++)snowSeed[i]=Math.random()*6.28;
+
+const clouds=[];
+{
+  const mat=new THREE.MeshStandardMaterial({color:0x141f38,roughness:1,transparent:true,opacity:0.5});
+  for(let i=0;i<6;i++){
+    const c=new THREE.Mesh(new THREE.SphereGeometry(3,8,5),mat);
+    c.scale.set(5.5+Math.random()*3,0.26,1.6);
+    const z=10-i*120;
+    c.position.set((Math.random()-0.5)*220,heightAt(0,z)+40+Math.random()*22,z);
+    c.userData.speed=0.5+Math.random()*0.7;
+    scene.add(c); clouds.push(c);
+  }
+}
+const birds=[];
+{
+  const mat=new THREE.MeshBasicMaterial({color:0x0a0f1c,side:THREE.DoubleSide});
+  for(let i=0;i<3;i++){
+    const g=new THREE.Group();
+    const wL=new THREE.Mesh(new THREE.PlaneGeometry(0.8,0.22),mat); wL.position.x=-0.4; g.add(wL);
+    const wR=wL.clone(); wR.position.x=0.4; g.add(wR);
+    const cz=-80-i*190;
+    g.userData={cx:(Math.random()-0.5)*60,cy:heightAt(0,cz)+26+i*4,cz,r:18+i*6,ph:Math.random()*6,sp:0.22+Math.random()*0.12,wL,wR};
+    scene.add(g); birds.push(g);
+  }
+}
+
+/* ============================= fireworks ============================= */
+const bursts=[];
+function spawnBurst(pos,color,{n=90,speed=11,grav=5,life=1.9,size=0.5}={}){
+  const geo=new THREE.BufferGeometry();
+  const a=new Float32Array(n*3), vel=new Float32Array(n*3);
+  for(let i=0;i<n;i++){
+    a[i*3]=pos.x;a[i*3+1]=pos.y;a[i*3+2]=pos.z;
+    const th=Math.random()*6.283, ph=Math.acos(2*Math.random()-1), sp=speed*(0.45+Math.random()*0.55);
+    vel[i*3]=Math.sin(ph)*Math.cos(th)*sp; vel[i*3+1]=Math.cos(ph)*sp; vel[i*3+2]=Math.sin(ph)*Math.sin(th)*sp;
+  }
+  geo.setAttribute('position',new THREE.BufferAttribute(a,3));
+  const mat=new THREE.PointsMaterial({color,size,transparent:true,opacity:1,depthWrite:false,blending:THREE.AdditiveBlending,map:radialTex(32,[[0,'rgba(255,255,255,1)'],[1,'rgba(255,255,255,0)']])});
+  const pts=new THREE.Points(geo,mat);
+  scene.add(pts);
+  bursts.push({pts,vel,age:0,life,grav});
+}
+function updateBursts(dt){
+  for(let i=bursts.length-1;i>=0;i--){
+    const b=bursts[i]; b.age+=dt;
+    if(b.age>=b.life){scene.remove(b.pts);b.pts.geometry.dispose();b.pts.material.dispose();bursts.splice(i,1);continue;}
+    const p=b.pts.geometry.attributes.position.array;
+    for(let k=0;k<b.vel.length;k+=3){
+      b.vel[k+1]-=b.grav*dt;
+      p[k]+=b.vel[k]*dt; p[k+1]+=b.vel[k+1]*dt; p[k+2]+=b.vel[k+2]*dt;
+    }
+    b.pts.geometry.attributes.position.needsUpdate=true;
+    b.pts.material.opacity=1-(b.age/b.life);
+  }
+}
+
+/* ============================= stations & segments ============================= */
+const STN={
+  email:{tag:'start',zone:'hero',label:'Approval Email'},
+  mental:{tag:'rock',zone:'ride',label:'Mental Model'},
+  j1:{tag:'j1',zone:'air',label:'Jump 1 · Questions',air:true},
+  j2:{tag:'j2',zone:'air',label:'Jump 2 · Questions',air:true},
+  j3:{tag:'j3',zone:'air',label:'Jump 3 · Questions',air:true},
+  o1:{tag:'o1',zone:'ride',label:'Objection 1'},
+  o2:{tag:'o2',zone:'ride',label:'Objection 2'},
+  o3:{tag:'o3',zone:'ride',label:'Objection 3'},
+  o4:{tag:'o4',zone:'ride',label:'Objection 4'},
+  o5:{tag:'o5',zone:'ride',label:'Objection 5'},
+  o6:{tag:'o6',zone:'ride',label:'Objection 6'},
+  o7:{tag:'o7',zone:'ride',label:'Objection 7'},
+  o8:{tag:'o8',zone:'ride',label:'Objection 8'},
+  pos:{tag:'pos',zone:'steep',label:'Positioning'},
+  bubble:{tag:'camp',zone:'camp',label:'Base Camp',noPopup:true},
+  draw:{tag:'camp',zone:'camp',label:'First Draw'},
+};
+for(const id in STN){
+  const st=STN[id]; st.u=tagU[st.tag];
+  if(st.noPopup) continue;
+  st.el=document.getElementById('pp-'+id);
+  st.card=st.el.querySelector('.card');
+  st.scroller=st.el.querySelector('.card-scroller');
+  st.content=st.el.querySelector('.card-content');
+  st.cue=st.el.querySelector('.more-cue');
+  st._shown=false;
+}
+const PLAN=[
+  {t:'hero',vh:0.95,zone:'hero'},
+  {t:'st',id:'email'},
+  {t:'tr',a:'start',b:'rock',vh:1.5,zone:'ride'},
+  {t:'st',id:'mental'},
+  {t:'tr',a:'rock',b:'j1',vh:2.7,zone:'ride'},
+  {t:'st',id:'j1'},
+  {t:'tr',a:'j1',b:'j2',vh:1.15,zone:'ride'},
+  {t:'st',id:'j2'},
+  {t:'tr',a:'j2',b:'j3',vh:1.15,zone:'ride'},
+  {t:'st',id:'j3'},
+  {t:'tr',a:'j3',b:'o1',vh:2.1,zone:'ride'},
+];
+for(let i=1;i<=8;i++){
+  PLAN.push({t:'st',id:'o'+i});
+  if(i<8) PLAN.push({t:'tr',a:'o'+i,b:'o'+(i+1),vh:0.95,zone:'ride'});
+}
+PLAN.push({t:'tr',a:'o8',b:'pos',vh:1.9,zone:'steep'});
+PLAN.push({t:'st',id:'pos'});
+PLAN.push({t:'tr',a:'pos',b:'camp',vh:2.0,zone:'camp'});
+PLAN.push({t:'st',id:'bubble'});
+PLAN.push({t:'st',id:'draw'});
+PLAN.push({t:'fin',vh:2.4,zone:'fin'});
+
+/* uniform thresholds: every station opens over ENTER px, releases after a fixed
+   RELEASE px past the content bottom, and fades over EXIT px. */
+const ENTER=180, RELEASE=180, EXIT=180;
+let segs=[], stationSegs=[], totalPx=10;
+function buildSegments(){
+  segs=[]; stationSegs=[]; let acc=0;
+  const vh=innerHeight;
+  for(const p of PLAN){
+    const s={...p,start:acc};
+    if(p.t==='st'){
+      const st=STN[p.id];
+      st.ovf=st.noPopup?0:Math.max(0,st.scroller.scrollHeight-st.scroller.clientHeight);
+      s.ovf=st.ovf;
+      s.px=ENTER+st.ovf+RELEASE+EXIT;
+      s.u=st.u; s.zone=st.zone;
+      stationSegs.push(s);
+    }else if(p.t==='tr'){
+      s.px=Math.round(vh*p.vh); s.ua=tagU[p.a]; s.ub=tagU[p.b];
+    }else{
+      s.px=Math.round(vh*p.vh); s.u=p.t==='hero'?tagU.start:tagU.camp;
+    }
+    acc+=s.px; s.end=acc; segs.push(s);
+  }
+  totalPx=acc;
+}
+
+/* ============================= tracker ============================= */
+const trackerDots=[];
+{
+  const tracker=document.getElementById('tracker');
+  const ids=['email','mental','j1','j2','j3','o1','o2','o3','o4','o5','o6','o7','o8','pos','draw'];
+  const yTop=150, yBot=-15;
+  const fr=id=>{const c=CP.find(c=>c.tag===STN[id].tag);return clamp((yTop-c.y)/(yTop-yBot),0,1);};
+  for(const id of ids){
+    const d=document.createElement('div'); d.className='tr-dot';
+    d.style.top=`calc(14px + ${fr(id).toFixed(4)} * (100% - 28px))`;
+    const l=document.createElement('div'); l.className='lbl'; l.textContent=STN[id].label; d.appendChild(l);
+    tracker.appendChild(d); trackerDots.push({id,el:d,fr:fr(id)});
+  }
+  const d=document.createElement('div'); d.className='tr-dot'; d.style.top='calc(14px + 1.0 * (100% - 28px))';
+  const l=document.createElement('div'); l.className='lbl'; l.textContent='Finale'; d.appendChild(l);
+  tracker.appendChild(d); trackerDots.push({id:'finale',el:d,fr:1});
+}
+const trSkier=document.getElementById('tr-skier');
+
+/* ============================= scroll engine v2 =============================
+   Virtual scroll: wheel/keys feed `target`; `smooth` chases it with a
+   symmetric lerp + velocity cap. Station gates clamp `target` so a fast
+   flick always locks onto the next station instead of blasting through. */
+let target=0, smooth=0;
+window.addEventListener('wheel',e=>{
+  e.preventDefault();
+  let d=e.deltaY;
+  if(e.deltaMode===1)d*=16; else if(e.deltaMode===2)d*=innerHeight;
+  d=clamp(d,-420,420);
+  target=clamp(target+d,0,totalPx-2);
+},{passive:false});
+window.addEventListener('keydown',e=>{
+  const vh=innerHeight;
+  const map={ArrowDown:140,ArrowUp:-140,PageDown:vh*0.8,PageUp:-vh*0.8,' ':(e.shiftKey?-vh*0.8:vh*0.8),Home:-1e9,End:1e9};
+  if(map[e.key]===undefined)return;
+  e.preventDefault();
+  target=clamp(target+map[e.key],0,totalPx-2);
+});
+
+function applyGates(){
+  // forward: the nearest station whose content hasn't been fully read caps the target
+  for(const g of stationSegs){
+    const A=g.start, B=A+ENTER, C=B+g.ovf;
+    if(smooth<C-2){
+      const lim=(smooth<A-2)?B+40:C+RELEASE*0.5;
+      if(target>lim)target=lim;
+      break;
+    }
+  }
+  // backward: mirror — the nearest station above whose content isn't back at the top
+  for(let i=stationSegs.length-1;i>=0;i--){
+    const g=stationSegs[i];
+    const B=g.start+ENTER, C=B+g.ovf, D=C+RELEASE, E=g.end;
+    if(smooth>B+2){
+      const lim=(smooth>E+2)?D-40:B-ENTER*0.5;
+      if(target<lim)target=lim;
+      break;
+    }
+  }
+  target=clamp(target,0,totalPx-2);
+}
+
+function segAt(s){
+  for(let i=0;i<segs.length;i++) if(s<segs[i].end) return segs[i];
+  return segs[segs.length-1];
+}
+function stationPhase(seg,s){
+  const local=clamp(s-seg.start,0,seg.px);
+  const ovf=seg.ovf||0;
+  const bodyEnd=seg.px-EXIT;
+  let vis;
+  if(local<ENTER)vis=sstep(local/ENTER);
+  else if(local>bodyEnd)vis=1-sstep((local-bodyEnd)/EXIT);
+  else vis=1;
+  const contentY=clamp(local-ENTER,0,ovf);
+  const nudge=clamp((local-ENTER-ovf)/RELEASE,0,1);
+  const hint=ovf>4&&contentY<ovf-10&&vis>0.85;
+  return {vis,contentY,nudge,hint};
+}
+function applyStation(id,ph){
+  const st=STN[id]; if(!st.el)return;
+  if(ph.vis<=0.002){
+    if(st._shown){st.el.style.opacity='0';st.el.style.visibility='hidden';st._shown=false;}
+    return;
+  }
+  st._shown=true;
+  st.el.style.visibility='visible';
+  st.el.style.opacity=ph.vis.toFixed(3);
+  st.card.style.transform=`translateY(${((1-ph.vis)*26-ph.nudge*10).toFixed(2)}px) scale(${(0.97+0.03*ph.vis).toFixed(4)})`;
+  st.content.style.transform=`translateY(${(-ph.contentY).toFixed(1)}px)`;
+  st.cue.style.opacity=ph.hint?'1':'0';
+}
+
+/* camera zones */
+const ZONES={
+  hero:{dist:15,h:2.1,ahead:3,up:3.3,side:0,fov:50},
+  ride:{dist:11,h:4.1,ahead:7,up:1.6,side:0,fov:55},
+  air:{dist:9.5,h:3.0,ahead:6,up:1.9,side:3.0,fov:58},
+  steep:{dist:12,h:5.9,ahead:11,up:0.7,side:0,fov:64},
+  camp:{dist:10.5,h:3.1,ahead:2.5,up:1.7,side:4.4,fov:52},
+  fin:{dist:25,h:8.5,ahead:0,up:5.5,side:8,fov:57},
+};
+const camP={...ZONES.hero};
+let camPosCur=null, camLookCur=null;
+
+const veil=document.getElementById('veil');
+const heroEl=document.getElementById('hero');
+const bubbleEl=document.getElementById('bubble');
+const finalCard=document.getElementById('final-card');
+let lastBlur=-1, lastVeilVis=false;
+let curU=tagU.start, prevU=tagU.start, finaleP=0, snowFactor=1, prevAir=0, shake=0;
+const tmpV1=new THREE.Vector3(),tmpV2=new THREE.Vector3(),tmpV3=new THREE.Vector3(),tmpV4=new THREE.Vector3(),tmpV5=new THREE.Vector3();
+
+let lastT=performance.now();
+
+function frame(now){
+  requestAnimationFrame(frame);
+  step(now);
+}
+function step(now){
+  const dt=clamp((now-lastT)/1000,0.001,0.05); lastT=now;
+  const t=now/1000;
+
+  // --- scroll: gates -> lerp -> velocity cap (identical both directions)
+  applyGates();
+  const k=1-Math.exp(-7*dt);          // ≈0.11 per 60fps frame
+  let step=(target-smooth)*k;
+  const maxStep=3000*dt;              // heavy-camera catch-up cap
+  if(step>maxStep)step=maxStep; else if(step<-maxStep)step=-maxStep;
+  smooth+=step;
+  if(Math.abs(target-smooth)<0.3)smooth=target;
+  const seg=segAt(smooth);
+
+  // --- skier param
+  let u;
+  if(seg.t==='hero') u=seg.u;
+  else if(seg.t==='tr') u=lerp(seg.ua,seg.ub,easeIO((smooth-seg.start)/seg.px));
+  else u=seg.u;
+  prevU=curU; curU=u;
+  const speed=clamp(Math.abs((curU-prevU)/dt)*22,0,1.3);
+
+  // --- finale progress
+  const finSeg=segs[segs.length-1];
+  finaleP=clamp((smooth-finSeg.start)/finSeg.px,0,1);
+
+  // --- popups
+  let veilV=0, jumpHold=false;
+  for(const s2 of stationSegs){
+    const st=STN[s2.id];
+    if(st.noPopup) continue;
+    const near=smooth>=s2.start-60&&smooth<=s2.end+60;
+    const ph=near?stationPhase(s2,smooth):{vis:0,contentY:smooth>s2.end?(s2.ovf||0):0,nudge:0,hint:false};
+    applyStation(s2.id,ph);
+    if(near&&ph.vis>0){ veilV=Math.max(veilV,ph.vis); if(st.air&&ph.vis>0.35) jumpHold=true; }
+  }
+  const vOn=veilV>0.01;
+  if(vOn!==lastVeilVis){veil.style.visibility=vOn?'visible':'hidden';lastVeilVis=vOn;}
+  if(vOn){
+    veil.style.opacity=veilV.toFixed(3);
+    const b=Math.round(veilV*12*2)/2;
+    if(b!==lastBlur){veil.style.backdropFilter=`blur(${b}px) saturate(0.92)`;lastBlur=b;}
+  }
+
+  // --- bubble
+  {
+    const bSeg=stationSegs.find(s2=>s2.id==='bubble');
+    const dSeg=stationSegs.find(s2=>s2.id==='draw');
+    let bv=0;
+    if(smooth>=bSeg.start&&smooth<dSeg.start+ENTER){
+      const popIn=sstep((smooth-bSeg.start)/ENTER);
+      const fadeOut=smooth>dSeg.start?1-sstep((smooth-dSeg.start)/ENTER):1;
+      bv=popIn*fadeOut;
+    }
+    if(bv>0.01){
+      bubbleEl.style.visibility='visible';
+      bubbleEl.style.opacity=Math.min(1,bv*1.4).toFixed(3);
+      friend.headG.getWorldPosition(tmpV4);
+      tmpV4.y+=0.5;
+      tmpV5.copy(tmpV4).project(camera);
+      const sx=(tmpV5.x*0.5+0.5)*innerWidth, sy=(-tmpV5.y*0.5+0.5)*innerHeight;
+      bubbleEl.style.transform=`translate(${sx.toFixed(1)}px,${(sy-24).toFixed(1)}px) translate(-50%,-100%) scale(${(0.7+0.3*bv).toFixed(3)})`;
+    }else bubbleEl.style.visibility='hidden';
+  }
+
+  // --- hero title
+  {
+    const hSeg=segs[0];
+    const hp=clamp(smooth/(hSeg.px*0.85),0,1);
+    heroEl.style.opacity=(1-hp).toFixed(3);
+    heroEl.style.visibility=hp>=1?'hidden':'visible';
+    heroEl.style.transform=`translateY(${(-hp*60).toFixed(1)}px)`;
+  }
+
+  // --- final card
+  {
+    const fc=clamp((finaleP-0.45)/0.32,0,1);
+    finalCard.style.opacity=fc.toFixed(3);
+    finalCard.style.visibility=fc>0.01?'visible':'hidden';
+    finalCard.querySelector('.fc-inner').style.transform=`translateY(${((1-fc)*36).toFixed(1)}px) scale(${(0.96+0.04*fc).toFixed(4)})`;
+  }
+
+  // --- skier transform
+  const pos=skiCurve.getPointAt(u);
+  const tan=skiCurve.getTangentAt(u);
+  const gy=heightAt(pos.x,pos.z);
+  const airH=Math.max(0,pos.y-gy-0.12);
+  const air=clamp(airH/1.8,0,1);
+  if(prevAir>0.45&&air<0.12&&speed>0.1){
+    spawnBurst(tmpV1.set(pos.x,gy+0.3,pos.z),0xdef4ff,{n:26,speed:3.5,grav:7,life:0.6,size:0.3});
+    shake=1;
+  }
+  prevAir=air;
+  shake=Math.max(0,shake-dt*2.4);
+
+  skier.g.position.set(pos.x,pos.y+0.16,pos.z);
+  const yaw=Math.atan2(tan.x,tan.z);
+  const pitch=-Math.atan2(tan.y,Math.hypot(tan.x,tan.z))*0.65-0.22*air;
+  const tan2=skiCurve.getTangentAt(Math.min(u+0.004,1));
+  const crossY=tan.x*tan2.z-tan.z*tan2.x;
+  let roll=clamp(-crossY*60*Math.min(1,speed+0.2),-0.45,0.45);
+  if(speed<0.04&&air<0.05) roll=Math.sin(t*1.3)*0.04;
+  skier.g.rotation.order='YXZ';
+  skier.g.rotation.y=yaw; skier.g.rotation.x=pitch; skier.g.rotation.z=roll;
+  const crouch=clamp(speed*1.1,0,1)*(1-air);
+  skier.inner.position.y=-0.13*crouch+0.035*Math.sin(t*2)*((speed<0.04&&air<0.05)?1:0);
+  skier.torso.rotation.x=0.13+0.3*crouch-0.32*air;
+  const celebr=finaleP>0.04;
+  if(celebr){
+    const amp=Math.min(1,finaleP*4);
+    skier.g.position.y+=Math.abs(Math.sin(t*4.4))*0.8*amp;
+    skier.armL.rotation.z=2.6; skier.armR.rotation.z=-2.6;
+    friend.armL.rotation.z=2.6; friend.armR.rotation.z=-2.6;
+    friend.g.position.y=campY(friend.g.position.x,friend.g.position.z)+Math.abs(Math.sin(t*4.4+0.5))*0.8*amp;
+  }else{
+    skier.armL.rotation.z=0.42+0.5*crouch-1.4*air;
+    skier.armR.rotation.z=-0.42-0.5*crouch+1.4*air;
+    skier.armL.rotation.x=0.2*crouch; skier.armR.rotation.x=0.2*crouch;
+    const nearCamp=u>tagU.camp-0.04;
+    friend.armR.rotation.z=nearCamp?(-2.3+Math.sin(t*4.2)*0.35):-0.42;
+    friend.armL.rotation.z=0.42;
+    friend.g.position.y=campY(friend.g.position.x,friend.g.position.z)+0.025*Math.sin(t*2.1);
+  }
+  skier.headG.rotation.y=(speed<0.04&&!celebr)?Math.sin(t*0.5)*0.28:0;
+
+  // aura + shadow + light
+  glowSpr.position.set(pos.x,pos.y+1.1,pos.z);
+  const gp=1+0.05*Math.sin(t*2.2)+finaleP*0.5;
+  glowSpr.scale.set(7*gp,7*gp,1);
+  skierLight.position.set(pos.x,pos.y+2.2,pos.z);
+  skierLight.intensity=9+finaleP*14;
+  blob.position.set(pos.x,gy+0.07,pos.z);
+  const bsc=1-0.35*air; blob.scale.set(bsc,bsc,1); blob.material.opacity=0.85-0.5*air;
+  blobF.position.set(friend.g.position.x,campY(friend.g.position.x,friend.g.position.z)+0.07,friend.g.position.z);
+
+  // trail draw
+  {
+    const startSeg=Math.floor(tagU.start*TUBULAR);
+    const endSeg=Math.floor(u*TUBULAR);
+    const count=Math.max(0,endSeg-startSeg)*IDX_PER_SEG;
+    trailCore.geometry.setDrawRange(startSeg*IDX_PER_SEG,count);
+    trailHalo.geometry.setDrawRange(startSeg*IDX_PER_SEG,count);
+    trailWide.geometry.setDrawRange(startSeg*IDX_PER_SEG,count);
+    trailHalo.material.opacity=0.36+0.05*Math.sin(t*2.3)+finaleP*(0.3+0.1*Math.sin(t*3));
+    trailWide.material.opacity=0.10+finaleP*0.16;
+  }
+
+  // --- camera
+  const zone=ZONES[seg.zone||'ride'];
+  const ck=1-Math.exp(-2.3*dt);
+  camP.dist=lerp(camP.dist,zone.dist+(seg.t==='fin'?finaleP*9:0),ck);
+  camP.h=lerp(camP.h,zone.h+(seg.t==='fin'?finaleP*4:0),ck);
+  camP.ahead=lerp(camP.ahead,zone.ahead,ck);
+  camP.up=lerp(camP.up,zone.up,ck);
+  camP.side=lerp(camP.side,zone.side,ck);
+  camP.fov=lerp(camP.fov,zone.fov,ck);
+  const f=tmpV1.set(tan.x,0,tan.z).normalize();
+  const r=tmpV2.set(f.z,0,-f.x);
+  const desired=tmpV3.copy(skier.g.position).addScaledVector(f,-camP.dist).addScaledVector(r,camP.side);
+  desired.y=Math.max(skier.g.position.y+camP.h,heightAt(desired.x,desired.z)+1.6);
+  if(!camPosCur)camPosCur=desired.clone();
+  camPosCur.lerp(desired,1-Math.exp(-4.5*dt));
+  const look=tmpV4.copy(skier.g.position).addScaledVector(f,camP.ahead);
+  look.y+=camP.up;
+  if(!camLookCur)camLookCur=look.clone();
+  camLookCur.lerp(look,1-Math.exp(-4.5*dt));
+  camera.position.copy(camPosCur);
+  if(shake>0){camera.position.y+=Math.sin(t*70)*0.1*shake;camera.position.x+=Math.cos(t*63)*0.07*shake;}
+  camera.lookAt(camLookCur);
+  if(Math.abs(camera.fov-camP.fov)>0.05){camera.fov=camP.fov;camera.updateProjectionMatrix();}
+  sky.position.copy(camera.position);
+
+  // --- ambient life
+  snowFactor=lerp(snowFactor,jumpHold?0.1:1,1-Math.exp(-3*dt));
+  {
+    const a=snowGeo.attributes.position.array;
+    const cx=camera.position.x, cy=camera.position.y, cz=camera.position.z;
+    for(let i=0;i<SNOW_N;i++){
+      let y=a[i*3+1]-(3.2+1.6*Math.sin(snowSeed[i]))*snowFactor*dt;
+      let x=a[i*3]+Math.sin(t*0.5+snowSeed[i])*dt*1.1*snowFactor;
+      let z=a[i*3+2];
+      if(y<cy-32)y+=64; if(y>cy+32)y-=64;
+      if(x<cx-50)x+=100; if(x>cx+50)x-=100;
+      if(z<cz-50)z+=100; if(z>cz+50)z-=100;
+      a[i*3]=x;a[i*3+1]=y;a[i*3+2]=z;
+    }
+    snowGeo.attributes.position.needsUpdate=true;
+  }
+  for(const c of clouds){c.position.x+=c.userData.speed*dt;if(c.position.x>150)c.position.x=-150;}
+  for(const b of birds){
+    const d2=b.userData; const a=t*d2.sp+d2.ph;
+    b.position.set(d2.cx+Math.cos(a)*d2.r,d2.cy+Math.sin(a*1.7)*2,d2.cz+Math.sin(a)*d2.r);
+    b.rotation.y=-a-Math.PI/2;
+    const fl=Math.sin(t*8+d2.ph)*0.5;
+    d2.wL.rotation.z=fl; d2.wR.rotation.z=-fl;
+  }
+
+  // fireworks — cold palette
+  if(finaleP>0.1){
+    if(!frame._lastFw||t-frame._lastFw>0.6){
+      frame._lastFw=t;
+      const col=Math.random()<0.3?new THREE.Color(0xeef6ff):new THREE.Color().setHSL(0.5+Math.random()*0.13,0.75,0.68);
+      spawnBurst(tmpV5.set((Math.random()-0.5)*60,heightAt(0,-630)+9+Math.random()*11,-616-Math.random()*45),col,{n:110,speed:13,grav:4.5,life:2.1,size:0.55});
+      if(Math.random()<0.5) spawnBurst(tmpV5.set(skier.g.position.x+(Math.random()-0.5)*4,skier.g.position.y+2,skier.g.position.z+(Math.random()-0.5)*3),new THREE.Color().setHSL(0.5+Math.random()*0.1,0.6,0.75),{n:34,speed:5,grav:7,life:1.1,size:0.28});
+    }
+  }
+  updateBursts(dt);
+
+  // tracker
+  {
+    const prog=clamp((u-tagU.start)/(tagU.camp-tagU.start),0,1);
+    const skierFr=clamp((150-pos.y)/165,0,1);
+    trSkier.style.top=`calc(14px + ${skierFr.toFixed(4)} * (100% - 28px))`;
+    const activeId=seg.t==='st'?seg.id:(seg.t==='fin'?'finale':null);
+    for(const d of trackerDots){
+      const stU=d.id==='finale'?1:clamp((STN[d.id].u-tagU.start)/(tagU.camp-tagU.start),0,1);
+      const done=d.id==='finale'?finaleP>0.1:prog>=stU-0.001;
+      d.el.classList.toggle('done',done&&activeId!==d.id);
+      d.el.classList.toggle('on',activeId===d.id);
+    }
+  }
+
+  window.__state={s:Math.round(smooth),target:Math.round(target),seg:seg.t+(seg.id?':'+seg.id:''),u:+u.toFixed(4),finaleP:+finaleP.toFixed(3),veil:+veilV.toFixed(2),total:totalPx};
+  renderer.render(scene,camera);
+}
+window.__setTarget=v=>{target=clamp(v,0,totalPx-2);};
+window.__nudge=d=>{target=clamp(target+d,0,totalPx-2);};
+window.__jump=v=>{target=clamp(v,0,totalPx-2);smooth=target;};
+window.__step=ms=>step(ms!==undefined?ms:performance.now());
+window.__segs=()=>segs.map(s=>({t:s.t,id:s.id||null,start:s.start,end:s.end,ovf:s.ovf??null}));
+
+/* ============================= boot ============================= */
+function onResize(){
+  const fr=totalPx>10?smooth/totalPx:0, frT=totalPx>10?target/totalPx:0;
+  renderer.setSize(innerWidth,innerHeight);
+  camera.aspect=innerWidth/innerHeight;
+  camera.updateProjectionMatrix();
+  buildSegments();
+  smooth=fr*totalPx; target=frT*totalPx;
+}
+window.addEventListener('resize',onResize);
+
+Promise.race([document.fonts.ready,new Promise(r=>setTimeout(r,2500))]).then(()=>{
+  buildSegments();
+  setTimeout(buildSegments,600);
+  document.getElementById('loader').classList.add('gone');
+  requestAnimationFrame(frame);
+});
+</script>
+</body>
+</html>
